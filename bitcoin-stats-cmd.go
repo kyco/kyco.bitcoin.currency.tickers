@@ -16,13 +16,15 @@ var err error
 
 // Luno Ticker
 type LunoTicker struct {
-	Ask                 string `json:"ask"`
-	Timestamp           int64  `json:"timestamp"`
-	Bid                 string `json:"bid"`
-	Rolling24HourVolume string `json:"rolling_24_hour_volume"`
-	LastTrade           string `json:"last_trade"`
+	Tickers []struct {
+		Timestamp           int64  `json:"timestamp"`
+		Bid                 string `json:"bid"`
+		Ask                 string `json:"ask"`
+		LastTrade           string `json:"last_trade"`
+		Rolling24HourVolume string `json:"rolling_24_hour_volume"`
+		Pair                string `json:"pair"`
+	} `json:"tickers"`
 }
-
 type Bitstamp struct {
 	High      string `json:"high"`
 	Last      string `json:"last"`
@@ -59,7 +61,7 @@ func bitcoin_prices() {
 // Grabs a snapshot of the current luno exchange
 func luno_ticker() {
 	// Make API call to luno
-	resp := api_call("https://api.mybitx.com/api/1/ticker?pair=XBTZAR")
+	resp := api_call("https://api.mybitx.com/api/1/tickers")
 
 	// Callers should close resp.Body
 	// when done reading from it
@@ -75,9 +77,12 @@ func luno_ticker() {
 	}
 
 	// Write to DB
-	// Format timestamp as string
-	timestampString := strconv.FormatInt(record.Timestamp, 10)
-	insert_into_sqlite("Luno", timestampString, record.Ask, record.Bid, "0", "ZAR")
+	// Loop through the slice
+	for i := range record.Tickers {
+		// Format timestamp as string
+		timestampString := strconv.FormatInt(record.Tickers[i].Timestamp, 10)
+		insert_into_sqlite("Luno", timestampString, record.Tickers[i].Ask, record.Tickers[i].Bid, "0", record.Tickers[i].Pair[3:])
+	}
 }
 
 // Grabs a snapshot of the current bitstamp exchange
