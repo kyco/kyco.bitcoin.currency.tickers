@@ -142,91 +142,12 @@ func api_call(urlRequest string) *http.Response {
 	return resp
 }
 
-// // Creates a standard config file
-// func create_default_config_file() {
-// 	// Create a config file in the user's home folder
-// 	createFolderErr := os.MkdirAll(home, 0777)
-// 	check(createFolderErr)
-// 	// Create a new file and write some data to it
-// 	d1 := []byte("[testnet]\nnodeHost=\"127.0.0.1:8333\"\nnodePost=\"8333\"\nnodeUsername=\"nothing\"\nnodePassword=\"password\"\nblocks=true\nmempool=true\n\n[mainnet]\nnodeHost=\"127.0.0.1:8333\"\nnodePost=\"8333\"\nnodeUsername=\"nothing\"\nnodePassword=\"password\"\nblocks=true\nmempool=true")
-// 	err := ioutil.WriteFile(home+"config.toml", d1, 0666)
-// 	check(err)
-// }
-
-// // Initialise configuration file
-// func config_init() {
-
-// 	// Config File
-// 	viper.SetConfigName("config") // no need to include file extension
-// 	viper.AddConfigPath(home)     // set the path of your config file
-
-// 	err := viper.ReadInConfig()
-// 	if err != nil {
-// 		log.Println("Config file not found...")
-// 		// Create the config file
-// 		create_default_config_file()
-// 	}
-// 	dev_nodeHost := viper.GetString("testnet.nodeHost")
-// 	dev_nodePort := viper.GetString("testnet.nodePort")
-// 	dev_nodeUsername := viper.GetString("testnet.nodeUsername")
-// 	dev_nodePassword := viper.GetString("testnet.nodePassword")
-// 	dev_blocks := viper.GetBool("testnet.blocks")
-// 	dev_mempool := viper.GetBool("testnet.mempool")
-
-// 	prod_nodeHost := viper.GetString("mainnet.nodeHost")
-// 	prod_nodePort := viper.GetString("mainnet.nodePort")
-// 	prod_nodeUsername := viper.GetString("mainnet.nodeUsername")
-// 	prod_nodePassword := viper.GetString("mainnet.nodePassword")
-// 	prod_blocks := viper.GetBool("mainnet.blocks")
-// 	prod_mempool := viper.GetBool("mainnet.mempool")
-
-// 	Testnet = Config{
-// 		nodeHost:     dev_nodeHost,
-// 		nodePort:     dev_nodePort,
-// 		nodeUsername: dev_nodeUsername,
-// 		nodePassword: dev_nodePassword,
-// 		Blocks:       dev_blocks,
-// 		Mempool:      dev_mempool}
-// 	Mainnet = Config{
-// 		nodeHost:     prod_nodeHost,
-// 		nodePort:     prod_nodePort,
-// 		nodeUsername: prod_nodeUsername,
-// 		nodePassword: prod_nodePassword,
-// 		Blocks:       prod_blocks,
-// 		Mempool:      prod_mempool}
-// }
-
 // Check for and print/panic on errors
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
-
-// // Initialise clear
-// func init() {
-// 	clear = make(map[string]func()) //Initialize it
-// 	clear["linux"] = func() {
-// 		cmd := exec.Command("clear") //Linux example, its tested
-// 		cmd.Stdout = os.Stdout
-// 		cmd.Run()
-// 	}
-// 	clear["windows"] = func() {
-// 		cmd := exec.Command("cls") //Windows example it is untested, but I think its working
-// 		cmd.Stdout = os.Stdout
-// 		cmd.Run()
-// 	}
-// }
-
-// // Clear
-// func CallClear() {
-// 	value, ok := clear[runtime.GOOS] //runtime.GOOS -> linux, windows, darwin etc.
-// 	if ok {                          //if we defined a clear func for that platform:
-// 		value() //we execute it
-// 	} else { //unsupported platform
-// 		panic("Your platform is unsupported! I can't clear terminal screen :(")
-// 	}
-// }
 
 // Open SQlite Connection
 func sqlite_open() *sql.DB {
