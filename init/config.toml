@@ -1,0 +1,12 @@
+# Config file to manage bitcoin stats
+
+[config]
+logFile = ""
+sqliteLocation = ""
+
+# Exchange specific configs
+[exchanges]
+# Kraken API Keys
+[exchanges.kraken]
+apiKey = ""
+apiSecrey = ""
