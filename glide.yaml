@@ -1,0 +1,12 @@
+package: .
+import:
+- package: github.com/Beldur/kraken-go-api-client
+- package: github.com/fsnotify/fsnotify
+  version: ^1.4.2
+- package: github.com/gizak/termui
+  version: ^2.2.0
+- package: github.com/mattn/go-sqlite3
+  version: ^1.2.0
+- package: github.com/op/go-logging
+  version: ^1.0.0
+- package: github.com/spf13/viper

@@ -12,3 +12,6 @@
 
 # Ignore unused files
 ui-*
+
+# Ignore vendors folder
+vendor/

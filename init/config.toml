@@ -16,8 +16,6 @@ apiSecrey = ""
 # Luno URL
 [exchanges.luno]
 url = ""
-apiKey = ""
-apiSecrey = ""
 
 # Bitstamp URL
 [exchanges.bitstamp]
