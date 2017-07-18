@@ -2,6 +2,17 @@
 Written in Golang. This is a project which combines the data from various Bitcoin exchanges around the world.
 
 ### How To Run?
+
+#### Dependencies
+To install the required dependencies to compile your own binaries.
+```
+go get -u github.com/Beldur/kraken-go-api-client
+go get -u github.com/fsnotify/fsnotify
+go get -u github.com/mattn/go-sqlite3
+go get -u github.com/spf13/viper
+go get -u github.com/op/go-logging
+```
+
 ```
 go build bitcoin-stats-cmd
 ./bitcoin-stats-cmd

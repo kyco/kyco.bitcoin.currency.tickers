@@ -6,7 +6,19 @@ sqliteLocation = ""
 
 # Exchange specific configs
 [exchanges]
-# Kraken API Keys
+
+# Kraken URL & API Keys
 [exchanges.kraken]
+url = ""
 apiKey = ""
 apiSecrey = ""
+
+# Luno URL
+[exchanges.luno]
+url = ""
+apiKey = ""
+apiSecrey = ""
+
+# Bitstamp URL
+[exchanges.bitstamp]
+url = ""

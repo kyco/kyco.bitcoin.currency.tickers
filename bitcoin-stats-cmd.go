@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Beldur/kraken-go-api-client"
+	"github.com/fsnotify/fsnotify"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -44,14 +45,34 @@ type Config struct {
 	LogFile        string
 	SqliteLocation string
 	Kraken         KrakenConfig
+	Luno           LunoConfig
+	Bitstamp       BitstampConfig
 }
 
 type KrakenConfig struct {
+	URL       string
 	APIKey    string
 	APISecret string
 }
 
+type LunoConfig struct {
+	URL string
+}
+
+type BitstampConfig struct {
+	URL string
+}
+
 var config Config
+var logFile *os.File
+var log = logging.MustGetLogger("bitcoin-logger")
+
+// Example format string. Everything except the message has a custom color
+// which is dependent on the log level. Many fields have a custom output
+// formatting too, eg. the time returns the hour down to the milli second.
+var format = logging.MustStringFormatter(
+	`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
+)
 
 // Setup global home and config folders
 // File location
@@ -66,10 +87,15 @@ func bitcoin_prices() {
 
 		// Start luno ticker
 		luno_ticker()
+		log.Notice("Started Luno Ticker")
+
 		// Start bitstamp ticker
 		bitstamp_ticker()
+		log.Notice("Started Bitstamp Ticker")
+
 		// Start kraken ticker
 		kraken_ticker()
+		log.Notice("Started Kraken Ticker")
 
 		time.Sleep(11 * time.Minute)
 	}
@@ -91,7 +117,7 @@ func luno_ticker() {
 
 	// Use json.Decode for reading streams of JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
-		log.Println(err)
+		log.Error(err)
 	}
 
 	// Write to DB
@@ -118,7 +144,7 @@ func bitstamp_ticker() {
 
 	// Use json.Decode for reading streams of JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
-		log.Println(err)
+		log.Error(err)
 	}
 	// Insert into SQlite
 	insert_into_sqlite("Bitstamp", record.Timestamp, record.Ask, record.Bid, record.Volume, "USD")
@@ -136,7 +162,7 @@ func kraken_ticker() {
 	// There are also some strongly typed methods available
 	tickerEUR, err := api.Ticker(krakenapi.XXBTZEUR)
 	if err != nil {
-		log.Println(err)
+		log.Warning(err)
 	}
 
 	// Insert into SQlite
@@ -145,7 +171,7 @@ func kraken_ticker() {
 	// There are also some strongly typed methods available
 	tickerUSD, err := api.Ticker(krakenapi.XXBTZUSD)
 	if err != nil {
-		log.Println(err)
+		log.Warning(err)
 	}
 
 	// Insert into SQlite
@@ -154,7 +180,7 @@ func kraken_ticker() {
 	// There are also some strongly typed methods available
 	tickerGBP, err := api.Ticker(krakenapi.XXBTZGBP)
 	if err != nil {
-		log.Println(err)
+		log.Warning(err)
 	}
 
 	// Insert into SQlite
@@ -170,7 +196,7 @@ func api_call(urlRequest string) *http.Response {
 	// Build the request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Println("NewRequest: ", err)
+		log.Error("NewRequest: ", err)
 		return nil
 	}
 
@@ -185,7 +211,7 @@ func api_call(urlRequest string) *http.Response {
 	// returns an HTTP response
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("Do: ", err)
+		log.Error("Do: ", err)
 		return nil
 	}
 
@@ -201,7 +227,7 @@ func api_call(urlRequest string) *http.Response {
 // Check for and print/panic on errors
 func check(e error) {
 	if e != nil {
-		panic(e)
+		log.Error(e)
 	}
 }
 
@@ -209,7 +235,7 @@ func check(e error) {
 func sqlite_open() *sql.DB {
 	db, err := sql.Open("sqlite3", home+"/data.db")
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 	}
 	return db
 }
@@ -233,7 +259,7 @@ func setup_sqlite_db() {
 		sqlStmt := `create table exchanges (id integer not null primary key, exchange text, timestamp real, ask real, bid real, volume real default 0, currencyCode text);`
 		_, err = sqliteDB.Exec(sqlStmt)
 		if err != nil {
-			log.Printf("%q: %s\n", err, sqlStmt)
+			log.Warning("%q: %s\n", err, sqlStmt)
 			return
 		}
 	}
@@ -248,11 +274,35 @@ func insert_into_sqlite(exchange string, timestamp string, ask string, bid strin
 	sqlStmt := `insert into exchanges (exchange, timestamp, ask, bid, volume, currencyCode) values ('` + exchange + `',` + timestamp + `, ` + ask + `,` + bid + `, ` + volume + `, '` + currencyCode + `');`
 	_, err = sqliteDB.Exec(sqlStmt)
 	if err != nil {
-		log.Printf("%q: %s\n", err, sqlStmt)
+		log.Warning("%q: %s\n", err, sqlStmt)
 		return
 	}
 	// Close the sqlite connection
 	sqliteDB.Close()
+}
+
+// Configure logging
+func config_log() {
+
+	// Check if it is already open
+	logFile.Close()
+
+	// Configure logging
+	logFile, err := os.OpenFile(config.LogFile, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Info("error opening file: %v", err)
+	}
+
+	// For demo purposes, create two backend for os.Stderr.
+	loggingFile := logging.NewLogBackend(logFile, "", 0)
+
+	// For messages written to loggingFile we want to add some additional
+	// information to the output, including the used log level and the name of
+	// the function.
+	loggingFileFormatter := logging.NewBackendFormatter(loggingFile, format)
+
+	// Set the backends to be used.
+	logging.SetBackend(loggingFileFormatter)
 }
 
 // Configure configs
@@ -264,19 +314,33 @@ func config_init() {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Println("Config file not found... Error %s\n", err)
+		log.Info("Config file not found... Error %s\n", err)
 	} else {
 
 		// ========= CONFIG ================================================================
 		logFile := viper.GetString("config.logFile")
 		sqliteLocation := viper.GetString("config.sqliteLocation")
+		krakenurl := viper.GetString("exchanges.kraken.url")
 		krakenAPIKey := viper.GetString("exchanges.kraken.apiKey")
 		krakenAPISecret := viper.GetString("exchanges.kraken.apiSecret")
+		lunourl := viper.GetString("exchanges.luno.url")
+		bitstampurl := viper.GetString("exchanges.bitstamp.url")
 
 		// Kraken
 		kraken := KrakenConfig{
+			URL:       krakenurl,
 			APIKey:    krakenAPIKey,
 			APISecret: krakenAPISecret,
+		}
+
+		// Luno
+		luno := LunoConfig{
+			URL: lunourl,
+		}
+
+		// Bitstamp
+		bitstamp := BitstampConfig{
+			URL: bitstampurl,
 		}
 
 		// Main Config
@@ -284,9 +348,23 @@ func config_init() {
 			LogFile:        logFile,
 			SqliteLocation: sqliteLocation,
 			Kraken:         kraken,
+			Luno:           luno,
+			Bitstamp:       bitstamp,
 		}
 	}
 
+	// Monitor the config file for changes and reload
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+
+		// Re-configure config
+		config_init()
+
+		// Re-configure logging
+		config_log()
+
+		log.Info("Config file changed:", e.Name)
+	})
 }
 
 func main() {
@@ -294,24 +372,20 @@ func main() {
 	// Initialise config file and settings
 	config_init()
 
-	// Logging
-	// open a file
-	f, err := os.OpenFile(config.LogFile, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		log.Printf("error opening file: %v", err)
-	}
+	// Configure logging
+	config_log()
 
-	// don't forget to close it
-	defer f.Close()
-
-	// assign it to the standard logger
-	log.SetOutput(f)
+	// don't forget to close the log file
+	defer logFile.Close()
 
 	// Setup Sqlite DB
 	setup_sqlite_db()
 
 	// Start bitcoin ticker
 	go bitcoin_prices()
+
+	// Notify log that we are up and running
+	log.Info("started Bitcoin Stats")
 
 	select {}
 }
