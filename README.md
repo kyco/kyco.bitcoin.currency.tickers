@@ -19,6 +19,8 @@ or
 glide install
 ```
 
+Build
+
 ```
 go build bitcoin-stats-cmd
 ./bitcoin-stats-cmd
@@ -36,7 +38,6 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying Bitfinex (Defined by Config File)
 
 ### Future / TODO
- - Systemd service files
  - More Database options (MySQL / Postgres)
  - More Exchanges (Kraken, BTCC, etc)
  - Functions which are more dynamic

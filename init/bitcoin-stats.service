@@ -1,0 +1,12 @@
+[Unit]
+Description=BitcoinStats
+
+[Service]
+PIDFile=/tmp/bitcoin-stats.pid
+User=user
+Group=user
+Restart=on-failure
+ExecStart=/bin/bash -c '/usr/bin/bitcoin-stats-cmd'
+
+[Install]
+WantedBy=multi-user.target
