@@ -37,6 +37,17 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying Kraken (EUR, USD, GBP)
  - Querying Bitfinex (Defined by Config File)
 
+### Service File
+A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Then run:
+
+```
+systemctl enable /usr/lib/systemd/user/bitcoin-stats.service
+systemctl daemon-reload
+service bitcoin-stats start | status | stop
+```
+
+Unless you modify the location of the binary, you must copy the compiled binary to ```/usr/bin/```.
+
 ### Future / TODO
  - More Database options (MySQL / Postgres)
  - More Exchanges (Kraken, BTCC, etc)
