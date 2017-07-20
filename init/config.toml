@@ -20,3 +20,8 @@ url = ""
 # Bitstamp URL
 [exchanges.bitstamp]
 url = ""
+
+# Bitfinex URL
+[exchanges.bitfinex]
+url = ""
+tickers = ""

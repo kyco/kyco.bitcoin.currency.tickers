@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,6 +29,7 @@ type LunoTicker struct {
 		Pair                string `json:"pair"`
 	} `json:"tickers"`
 }
+
 type Bitstamp struct {
 	High      string `json:"high"`
 	Last      string `json:"last"`
@@ -40,6 +42,17 @@ type Bitstamp struct {
 	Open      string `json:"open"`
 }
 
+type Bitfinex struct {
+	Ask       string `json:"ask"`
+	Bid       string `json:"bid"`
+	High      string `json:"high"`
+	LastPrice string `json:"last_price"`
+	Low       string `json:"low"`
+	Mid       string `json:"mid"`
+	Timestamp string `json:"timestamp"`
+	Volume    string `json:"volume"`
+}
+
 // Config type
 type Config struct {
 	LogFile        string
@@ -47,6 +60,7 @@ type Config struct {
 	Kraken         KrakenConfig
 	Luno           LunoConfig
 	Bitstamp       BitstampConfig
+	Bitfinex       BitfinexConfig
 }
 
 type KrakenConfig struct {
@@ -61,6 +75,11 @@ type LunoConfig struct {
 
 type BitstampConfig struct {
 	URL string
+}
+
+type BitfinexConfig struct {
+	URL     string
+	Tickers string
 }
 
 var config Config
@@ -87,15 +106,19 @@ func bitcoin_prices() {
 
 		// Start luno ticker
 		luno_ticker()
-		log.Notice("Started Luno Ticker")
+		log.Notice("Ran Luno Ticker")
 
 		// Start bitstamp ticker
 		bitstamp_ticker()
-		log.Notice("Started Bitstamp Ticker")
+		log.Notice("Ran Bitstamp Ticker")
 
 		// Start kraken ticker
 		kraken_ticker()
-		log.Notice("Started Kraken Ticker")
+		log.Notice("Ran Kraken Ticker")
+
+		// Start bitfinex ticker
+		bitfinex_ticker()
+		log.Notice("Ran Bitfinex Ticker")
 
 		time.Sleep(11 * time.Minute)
 	}
@@ -105,7 +128,7 @@ func bitcoin_prices() {
 // Grabs a snapshot of the current luno exchange
 func luno_ticker() {
 	// Make API call to luno
-	resp := api_call("https://api.mybitx.com/api/1/tickers")
+	resp := api_call(config.Luno.URL)
 
 	// Callers should close resp.Body
 	// when done reading from it
@@ -118,21 +141,21 @@ func luno_ticker() {
 	// Use json.Decode for reading streams of JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
 		log.Error(err)
-	}
-
-	// Write to DB
-	// Loop through the slice
-	for i := range record.Tickers {
-		// Format timestamp as string
-		timestampString := strconv.FormatInt(record.Tickers[i].Timestamp, 10)
-		insert_into_sqlite("Luno", timestampString, record.Tickers[i].Ask, record.Tickers[i].Bid, "0", record.Tickers[i].Pair[3:])
+	} else {
+		// Write to DB
+		// Loop through the slice
+		for i := range record.Tickers {
+			// Format timestamp as string
+			timestampString := strconv.FormatInt(record.Tickers[i].Timestamp, 10)
+			insert_into_sqlite("Luno", timestampString, record.Tickers[i].Ask, record.Tickers[i].Bid, "0", record.Tickers[i].Pair[3:])
+		}
 	}
 }
 
 // Grabs a snapshot of the current bitstamp exchange
 func bitstamp_ticker() {
 	// Make API call to bitstamp
-	resp := api_call("https://www.bitstamp.net/api/v2/ticker_hour/btcusd/")
+	resp := api_call(config.Bitstamp.URL)
 
 	// Callers should close resp.Body
 	// when done reading from it
@@ -145,9 +168,10 @@ func bitstamp_ticker() {
 	// Use json.Decode for reading streams of JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
 		log.Error(err)
+	} else {
+		// Insert into SQlite
+		insert_into_sqlite("Bitstamp", record.Timestamp, record.Ask, record.Bid, record.Volume, "USD")
 	}
-	// Insert into SQlite
-	insert_into_sqlite("Bitstamp", record.Timestamp, record.Ask, record.Bid, record.Volume, "USD")
 }
 
 // Gets ticker data from kraken
@@ -162,30 +186,64 @@ func kraken_ticker() {
 	// There are also some strongly typed methods available
 	tickerEUR, err := api.Ticker(krakenapi.XXBTZEUR)
 	if err != nil {
-		log.Warning(err)
+		log.Error(err)
+	} else {
+		// Insert into SQlite
+		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerEUR.XXBTZEUR.Ask[0], tickerEUR.XXBTZEUR.Bid[0], tickerEUR.XXBTZEUR.Volume[0], "EUR")
 	}
-
-	// Insert into SQlite
-	insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerEUR.XXBTZEUR.Ask[0], tickerEUR.XXBTZEUR.Bid[0], tickerEUR.XXBTZEUR.Volume[0], "EUR")
 
 	// There are also some strongly typed methods available
 	tickerUSD, err := api.Ticker(krakenapi.XXBTZUSD)
 	if err != nil {
-		log.Warning(err)
+		log.Error(err)
+	} else {
+		// Insert into SQlite
+		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerUSD.XXBTZUSD.Ask[0], tickerUSD.XXBTZUSD.Bid[0], tickerUSD.XXBTZUSD.Volume[0], "USD")
 	}
-
-	// Insert into SQlite
-	insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerUSD.XXBTZUSD.Ask[0], tickerUSD.XXBTZUSD.Bid[0], tickerUSD.XXBTZUSD.Volume[0], "USD")
 
 	// There are also some strongly typed methods available
 	tickerGBP, err := api.Ticker(krakenapi.XXBTZGBP)
 	if err != nil {
-		log.Warning(err)
+		log.Error(err)
+	} else {
+		// Insert into SQlite
+		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerGBP.XXBTZGBP.Ask[0], tickerGBP.XXBTZGBP.Bid[0], tickerGBP.XXBTZGBP.Volume[0], "GBP")
 	}
+}
 
-	// Insert into SQlite
-	insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerGBP.XXBTZGBP.Ask[0], tickerGBP.XXBTZGBP.Bid[0], tickerGBP.XXBTZGBP.Volume[0], "GBP")
+// Grabs a snapshot of the current bitfinex exchange
+func bitfinex_ticker() {
+	// In this case, we will loop through all
+	// the tickers set in the config file
+	tickerSplit := strings.Split(config.Bitfinex.Tickers, ",")
 
+	for i := range tickerSplit {
+
+		// Check if there is any data in the string
+		// if not, skip this loop
+		if len(tickerSplit[i]) < 2 {
+			continue
+		}
+
+		// Make API call to bitfinex
+		resp := api_call(config.Bitfinex.URL + tickerSplit[i])
+
+		// Callers should close resp.Body
+		// when done reading from it
+		// Defer the closing of the body
+		defer resp.Body.Close()
+
+		// Fill the record with the data from the JSON
+		var record Bitfinex
+
+		// Use json.Decode for reading streams of JSON data
+		if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
+			log.Error(err)
+		} else {
+			// Insert into SQlite
+			insert_into_sqlite("Bitfinex", record.Timestamp, record.Ask, record.Bid, record.Volume, tickerSplit[i])
+		}
+	}
 }
 
 // performs an API call to a URL and returns a JSON body response
@@ -325,6 +383,8 @@ func config_init() {
 		krakenAPISecret := viper.GetString("exchanges.kraken.apiSecret")
 		lunourl := viper.GetString("exchanges.luno.url")
 		bitstampurl := viper.GetString("exchanges.bitstamp.url")
+		bitfinexurl := viper.GetString("exchanges.bitfinex.url")
+		bitfinextickers := viper.GetString("exchanges.bitfinex.tickers")
 
 		// Kraken
 		kraken := KrakenConfig{
@@ -343,6 +403,12 @@ func config_init() {
 			URL: bitstampurl,
 		}
 
+		// Bitfinex
+		bitfinex := BitfinexConfig{
+			URL:     bitfinexurl,
+			Tickers: bitfinextickers,
+		}
+
 		// Main Config
 		config = Config{
 			LogFile:        logFile,
@@ -350,6 +416,7 @@ func config_init() {
 			Kraken:         kraken,
 			Luno:           luno,
 			Bitstamp:       bitstamp,
+			Bitfinex:       bitfinex,
 		}
 	}
 
