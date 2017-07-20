@@ -13,6 +13,12 @@ go get -u github.com/spf13/viper
 go get -u github.com/op/go-logging
 ```
 
+or
+
+```
+glide install
+```
+
 ```
 go build bitcoin-stats-cmd
 ./bitcoin-stats-cmd
@@ -22,8 +28,12 @@ go build bitcoin-stats-cmd
 It queries the APIs of various exchanges (more will be added as time goes by) and pops them into a sqlite database.
 
 ### What Works
- - Querying Bitstamp (USD only) every 10 minutes and save the response into a sqlite database
- - Querying Luno (NGN, ZAR, MYR, IDR) every 10 minutes and save the response into a sqlite database
+At this point in time each exchange is queried every 10 minutes and the results are saved into a sqlite database
+
+ - Querying Bitstamp (USD only)
+ - Querying Luno (NGN, ZAR, MYR, IDR)
+ - Querying Kraken (EUR, USD, GBP)
+ - Querying Bitfinex (Defined by Config File)
 
 ### Future / TODO
  - Systemd service files
@@ -31,3 +41,5 @@ It queries the APIs of various exchanges (more will be added as time goes by) an
  - More Exchanges (Kraken, BTCC, etc)
  - Functions which are more dynamic
  - Better logging
+ - Automated installation
+ 
