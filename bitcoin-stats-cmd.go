@@ -51,21 +51,21 @@ func bitcoin_prices() {
 		// wait for the tick
 		<-t.C
 
-		// // Start luno ticker
-		// luno_ticker()
-		// log.Notice("Ran Luno Ticker")
+		// Start luno ticker
+		luno_ticker()
+		log.Notice("Ran Luno Ticker")
 
-		// // Start bitstamp ticker
-		// bitstamp_ticker()
-		// log.Notice("Ran Bitstamp Ticker")
+		// Start bitstamp ticker
+		bitstamp_ticker()
+		log.Notice("Ran Bitstamp Ticker")
 
-		// // Start kraken ticker
-		// kraken_ticker()
-		// log.Notice("Ran Kraken Ticker")
+		// Start kraken ticker
+		kraken_ticker()
+		log.Notice("Ran Kraken Ticker")
 
-		// // Start bitfinex ticker
-		// bitfinex_ticker()
-		// log.Notice("Ran Bitfinex Ticker")
+		// Start bitfinex ticker
+		bitfinex_ticker()
+		log.Notice("Ran Bitfinex Ticker")
 
 		// Start bitsquare ticker
 		bitsquare_ticker()
