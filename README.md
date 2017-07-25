@@ -36,6 +36,7 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying Luno (NGN, ZAR, MYR, IDR)
  - Querying Kraken (EUR, USD, GBP)
  - Querying Bitfinex (Defined by Config File)
+ - Querying Bitsquare (Defined by Config File)
 
 ### Service File
 A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Then run:
@@ -50,7 +51,7 @@ Unless you modify the location of the binary in the service file, you must copy 
 
 ### Future / TODO
  - More Database options (MySQL / Postgres)
- - More Exchanges (Kraken, BTCC, etc)
+ - More Exchanges (BTCC, etc)
  - Functions which are more dynamic
  - Better logging
  - Automated installation
