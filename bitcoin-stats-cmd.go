@@ -289,7 +289,7 @@ func insert_into_sqlite(exchange string, timestamp string, ask string, bid strin
 // Waits for the minute to tick over
 func minuteTicker() *time.Ticker {
 	// Return new ticker that triggers on the minute
-	return time.NewTicker(time.Minute * time.Duration(10-time.Now().Minute()))
+	return time.NewTicker(time.Second * time.Duration(int(60*10)-time.Now().Second()))
 }
 
 // Configure logging
