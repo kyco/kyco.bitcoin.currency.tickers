@@ -51,23 +51,26 @@ func bitcoin_prices() {
 		// wait for the tick
 		<-t.C
 
-		//Start luno ticker
-		luno_ticker()
-		log.Notice("Ran Luno Ticker")
+		// // Start luno ticker
+		// luno_ticker()
+		// log.Notice("Ran Luno Ticker")
 
-		// Start bitstamp ticker
-		bitstamp_ticker()
-		log.Notice("Ran Bitstamp Ticker")
+		// // Start bitstamp ticker
+		// bitstamp_ticker()
+		// log.Notice("Ran Bitstamp Ticker")
 
-		// Start kraken ticker
-		kraken_ticker()
-		log.Notice("Ran Kraken Ticker")
+		// // Start kraken ticker
+		// kraken_ticker()
+		// log.Notice("Ran Kraken Ticker")
 
-		// Start bitfinex ticker
-		bitfinex_ticker()
-		log.Notice("Ran Bitfinex Ticker")
+		// // Start bitfinex ticker
+		// bitfinex_ticker()
+		// log.Notice("Ran Bitfinex Ticker")
 
-		time.Sleep(11 * time.Minute)
+		// Start bitsquare ticker
+		bitsquare_ticker()
+		log.Notice("Ran Bitsquare Ticker")
+
 	}
 
 }
@@ -193,6 +196,43 @@ func bitfinex_ticker() {
 	}
 }
 
+// Grabs a snapshot of the current bitsquare exchange
+func bitsquare_ticker() {
+	// In this case, we will loop through all
+	// the tickers set in the config file
+	tickerSplit := strings.Split(config.Bitsquare.Tickers, ",")
+
+	for i := range tickerSplit {
+
+		// Check if there is any data in the string
+		// if not, skip this loop
+		if len(tickerSplit[i]) < 2 {
+			continue
+		}
+
+		// Make API call to bitsquare
+		resp := api_call(config.Bitsquare.URL + tickerSplit[i])
+
+		// Callers should close resp.Body
+		// when done reading from it
+		// Defer the closing of the body
+		defer resp.Body.Close()
+
+		// Fill the record with the data from the JSON
+		var record []Bitsquare
+
+		// Use json.Decode for reading streams of JSON data
+		if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
+			log.Error(err)
+		} else {
+			// Create a timestamp now
+			ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
+			// Insert into SQlite
+			insert_into_sqlite("Bitsquare", ts, record[0].Buy, record[0].Sell, record[0].VolumeRight, tickerSplit[i])
+		}
+	}
+}
+
 // performs an API call to a URL and returns a JSON body response
 func api_call(urlRequest string) *http.Response {
 
@@ -273,17 +313,40 @@ func setup_sqlite_db() {
 // Insert function into sqlite
 func insert_into_sqlite(exchange string, timestamp string, ask string, bid string, volume string, currencyCode string) {
 
-	// Write to DB
-	sqliteDB := sqlite_open()
-	// Insert the database record
-	sqlStmt := `insert into exchanges (exchange, timestamp, ask, bid, volume, currencyCode) values ('` + exchange + `',` + timestamp + `, ` + ask + `,` + bid + `, ` + volume + `, '` + currencyCode + `');`
-	_, err = sqliteDB.Exec(sqlStmt)
-	if err != nil {
-		log.Warning("%q: %s\n", err, sqlStmt)
-		return
+	// If the exchange name is not there, ignore, otherwise run
+	if len(exchange) > 0 && len(currencyCode) > 0 {
+
+		// Clean strings, if the string doesn't contain anything, default
+		clean_strings(&timestamp, &ask, &bid, &volume)
+
+		// Write to DB
+		sqliteDB := sqlite_open()
+		// Insert the database record
+		sqlStmt := `insert into exchanges (exchange, timestamp, ask, bid, volume, currencyCode) values ('` + exchange + `',` + timestamp + `, ` + ask + `,` + bid + `, ` + volume + `, '` + currencyCode + `');`
+		_, err = sqliteDB.Exec(sqlStmt)
+		if err != nil {
+			log.Warning("%q: %s\n", err, sqlStmt)
+			return
+		}
+		// Close the sqlite connection
+		sqliteDB.Close()
 	}
-	// Close the sqlite connection
-	sqliteDB.Close()
+}
+
+// clean strings before inserting, to provide default values
+func clean_strings(timestamp *string, ask *string, bid *string, volume *string) {
+	if len(*timestamp) == 0 {
+		*timestamp = strconv.FormatInt(int64(time.Now().Unix()), 10)
+	}
+	if len(*ask) == 0 {
+		*ask = "0"
+	}
+	if len(*bid) == 0 {
+		*bid = "0"
+	}
+	if len(*volume) == 0 {
+		*volume = "0"
+	}
 }
 
 // Waits for the minute to tick over
@@ -338,6 +401,8 @@ func config_init() {
 		bitstampurl := viper.GetString("exchanges.bitstamp.url")
 		bitfinexurl := viper.GetString("exchanges.bitfinex.url")
 		bitfinextickers := viper.GetString("exchanges.bitfinex.tickers")
+		bitsquareurl := viper.GetString("exchanges.bitsquare.url")
+		bitsquaretickers := viper.GetString("exchanges.bitsquare.tickers")
 
 		// Kraken
 		kraken := KrakenConfig{
@@ -362,6 +427,12 @@ func config_init() {
 			Tickers: bitfinextickers,
 		}
 
+		// Bitsquare
+		bitsquare := BitsquareConfig{
+			URL:     bitsquareurl,
+			Tickers: bitsquaretickers,
+		}
+
 		// Main Config
 		config = Config{
 			LogFile:        logFile,
@@ -370,6 +441,7 @@ func config_init() {
 			Luno:           luno,
 			Bitstamp:       bitstamp,
 			Bitfinex:       bitfinex,
+			Bitsquare:      bitsquare,
 		}
 	}
 

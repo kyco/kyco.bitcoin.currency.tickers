@@ -26,6 +26,7 @@ url = ""
 url = ""
 tickers = ""
 
-# Bittrex URL
-[exchanges.bittrex]
+# Bitsquare URL
+[exchanges.bitsquare]
 url = ""
+tickers = ""

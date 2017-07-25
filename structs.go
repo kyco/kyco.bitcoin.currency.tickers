@@ -8,7 +8,7 @@ type Config struct {
 	Luno           LunoConfig
 	Bitstamp       BitstampConfig
 	Bitfinex       BitfinexConfig
-	Bittrex        BittrexConfig
+	Bitsquare      BitsquareConfig
 }
 
 type KrakenConfig struct {
@@ -30,8 +30,9 @@ type BitfinexConfig struct {
 	Tickers string
 }
 
-type BittrexConfig struct {
-	URL string
+type BitsquareConfig struct {
+	URL     string
+	Tickers string
 }
 
 // Luno Ticker
@@ -67,4 +68,14 @@ type Bitfinex struct {
 	Mid       string `json:"mid"`
 	Timestamp string `json:"timestamp"`
 	Volume    string `json:"volume"`
+}
+
+type Bitsquare struct {
+	Buy         string `json:"buy"`
+	High        string `json:"high"`
+	Last        string `json:"last"`
+	Low         string `json:"low"`
+	Sell        string `json:"sell"`
+	VolumeLeft  string `json:"volume_left"`
+	VolumeRight string `json:"volume_right"`
 }
