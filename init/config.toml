@@ -25,3 +25,7 @@ url = ""
 [exchanges.bitfinex]
 url = ""
 tickers = ""
+
+# Bittrex URL
+[exchanges.bittrex]
+url = ""

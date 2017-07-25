@@ -46,7 +46,7 @@ systemctl daemon-reload
 service bitcoin-stats start | status | stop
 ```
 
-Unless you modify the location of the binary, you must copy the compiled binary to ```/usr/bin/```.
+Unless you modify the location of the binary in the service file, you must copy the compiled binary to ```/usr/bin/```.
 
 ### Future / TODO
  - More Database options (MySQL / Postgres)

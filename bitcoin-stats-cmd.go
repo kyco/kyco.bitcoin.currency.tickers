@@ -18,69 +18,9 @@ import (
 
 var err error
 
-// Luno Ticker
-type LunoTicker struct {
-	Tickers []struct {
-		Timestamp           int64  `json:"timestamp"`
-		Bid                 string `json:"bid"`
-		Ask                 string `json:"ask"`
-		LastTrade           string `json:"last_trade"`
-		Rolling24HourVolume string `json:"rolling_24_hour_volume"`
-		Pair                string `json:"pair"`
-	} `json:"tickers"`
-}
-
-type Bitstamp struct {
-	High      string `json:"high"`
-	Last      string `json:"last"`
-	Timestamp string `json:"timestamp"`
-	Bid       string `json:"bid"`
-	Vwap      string `json:"vwap"`
-	Volume    string `json:"volume"`
-	Low       string `json:"low"`
-	Ask       string `json:"ask"`
-	Open      string `json:"open"`
-}
-
-type Bitfinex struct {
-	Ask       string `json:"ask"`
-	Bid       string `json:"bid"`
-	High      string `json:"high"`
-	LastPrice string `json:"last_price"`
-	Low       string `json:"low"`
-	Mid       string `json:"mid"`
-	Timestamp string `json:"timestamp"`
-	Volume    string `json:"volume"`
-}
-
-// Config type
-type Config struct {
-	LogFile        string
-	SqliteLocation string
-	Kraken         KrakenConfig
-	Luno           LunoConfig
-	Bitstamp       BitstampConfig
-	Bitfinex       BitfinexConfig
-}
-
-type KrakenConfig struct {
-	URL       string
-	APIKey    string
-	APISecret string
-}
-
-type LunoConfig struct {
-	URL string
-}
-
-type BitstampConfig struct {
-	URL string
-}
-
-type BitfinexConfig struct {
-	URL     string
-	Tickers string
-}
+/*
+	STRUCTS CONFIGURED IN structs.go
+*/
 
 var config Config
 var logFile *os.File
@@ -102,9 +42,16 @@ var home string = os.Getenv("HOME") + fileLocation
 
 // Initialises various bitcoin price tickers
 func bitcoin_prices() {
+
+	// Tick on the minute
+	t := minuteTicker()
+
 	for {
 
-		// Start luno ticker
+		// wait for the tick
+		<-t.C
+
+		//Start luno ticker
 		luno_ticker()
 		log.Notice("Ran Luno Ticker")
 
@@ -337,6 +284,12 @@ func insert_into_sqlite(exchange string, timestamp string, ask string, bid strin
 	}
 	// Close the sqlite connection
 	sqliteDB.Close()
+}
+
+// Waits for the minute to tick over
+func minuteTicker() *time.Ticker {
+	// Return new ticker that triggers on the minute
+	return time.NewTicker(time.Minute * time.Duration(10-time.Now().Minute()))
 }
 
 // Configure logging
