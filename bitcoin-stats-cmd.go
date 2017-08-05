@@ -90,14 +90,14 @@ func luno_ticker() {
 
 	// Use json.Decode for reading streams of JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	} else {
 		// Write to DB
 		// Loop through the slice
 		for i := range record.Tickers {
 			// Format timestamp as string
-			timestampString := strconv.FormatInt(record.Tickers[i].Timestamp, 10)
-			insert_into_sqlite("Luno", timestampString, record.Tickers[i].Ask, record.Tickers[i].Bid, "0", record.Tickers[i].Pair[3:])
+			timestampString := strconv.FormatInt(time.Now().Unix(), 10)
+			insert_into_sqlite("Luno", timestampString, record.Tickers[i].Ask, record.Tickers[i].Bid, "1", record.Tickers[i].Pair[3:])
 		}
 	}
 }
@@ -117,7 +117,7 @@ func bitstamp_ticker() {
 
 	// Use json.Decode for reading streams of JSON data
 	if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	} else {
 		// Insert into SQlite
 		insert_into_sqlite("Bitstamp", record.Timestamp, record.Ask, record.Bid, record.Volume, "USD")
@@ -136,7 +136,7 @@ func kraken_ticker() {
 	// There are also some strongly typed methods available
 	tickerEUR, err := api.Ticker(krakenapi.XXBTZEUR)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	} else {
 		// Insert into SQlite
 		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerEUR.XXBTZEUR.Ask[0], tickerEUR.XXBTZEUR.Bid[0], tickerEUR.XXBTZEUR.Volume[0], "EUR")
@@ -145,7 +145,7 @@ func kraken_ticker() {
 	// There are also some strongly typed methods available
 	tickerUSD, err := api.Ticker(krakenapi.XXBTZUSD)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	} else {
 		// Insert into SQlite
 		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerUSD.XXBTZUSD.Ask[0], tickerUSD.XXBTZUSD.Bid[0], tickerUSD.XXBTZUSD.Volume[0], "USD")
@@ -154,7 +154,7 @@ func kraken_ticker() {
 	// There are also some strongly typed methods available
 	tickerGBP, err := api.Ticker(krakenapi.XXBTZGBP)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	} else {
 		// Insert into SQlite
 		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerGBP.XXBTZGBP.Ask[0], tickerGBP.XXBTZGBP.Bid[0], tickerGBP.XXBTZGBP.Volume[0], "GBP")
@@ -188,10 +188,10 @@ func bitfinex_ticker() {
 
 		// Use json.Decode for reading streams of JSON data
 		if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("Bitfinex", record.Timestamp, record.Ask, record.Bid, record.Volume, tickerSplit[i])
+			insert_into_sqlite("Bitfinex", record.Timestamp, record.Ask, record.Bid, record.Volume, format_currency_string(tickerSplit[i]))
 		}
 	}
 }
@@ -223,12 +223,12 @@ func bitsquare_ticker() {
 
 		// Use json.Decode for reading streams of JSON data
 		if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		} else {
 			// Create a timestamp now
 			ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
 			// Insert into SQlite
-			insert_into_sqlite("Bitsquare", ts, record[0].Buy, record[0].Sell, record[0].VolumeRight, tickerSplit[i])
+			insert_into_sqlite("Bitsquare", ts, record[0].Buy, record[0].Sell, record[0].VolumeRight, format_currency_string(tickerSplit[i]))
 		}
 	}
 }
@@ -269,10 +269,15 @@ func api_call(urlRequest string) *http.Response {
 	return resp
 }
 
+// formats the currency code into something more standard
+func format_currency_string(currencyCode string) string {
+	return strings.ToUpper(strings.Replace(strings.Replace(currencyCode, "btc", "", -1), "_", "", -1))
+}
+
 // Check for and print/panic on errors
 func check(e error) {
 	if e != nil {
-		log.Error(e)
+		log.Error(e.Error())
 	}
 }
 
@@ -280,7 +285,7 @@ func check(e error) {
 func sqlite_open() *sql.DB {
 	db, err := sql.Open("sqlite3", home+"/data.db")
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	}
 	return db
 }
