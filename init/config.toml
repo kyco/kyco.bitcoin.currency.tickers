@@ -30,3 +30,8 @@ tickers = ""
 [exchanges.bitsquare]
 url = ""
 tickers = ""
+
+# BTCC URL
+[exchanges.btcc]
+url = ""
+tickers = ""

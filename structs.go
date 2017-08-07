@@ -9,6 +9,7 @@ type Config struct {
 	Bitstamp       BitstampConfig
 	Bitfinex       BitfinexConfig
 	Bitsquare      BitsquareConfig
+	BTCC           BtccConfig
 }
 
 type KrakenConfig struct {
@@ -31,6 +32,11 @@ type BitfinexConfig struct {
 }
 
 type BitsquareConfig struct {
+	URL     string
+	Tickers string
+}
+
+type BtccConfig struct {
 	URL     string
 	Tickers string
 }
@@ -78,4 +84,22 @@ type Bitsquare struct {
 	Sell        string `json:"sell"`
 	VolumeLeft  string `json:"volume_left"`
 	VolumeRight string `json:"volume_right"`
+}
+
+type BTCC struct {
+	Ticker struct {
+		AskPrice           float64 `json:"AskPrice"`
+		BidPrice           float64 `json:"BidPrice"`
+		ExecutionLimitDown float64 `json:"ExecutionLimitDown"`
+		ExecutionLimitUp   float64 `json:"ExecutionLimitUp"`
+		High               float64 `json:"High"`
+		Last               float64 `json:"Last"`
+		LastQuantity       float64 `json:"LastQuantity"`
+		Low                float64 `json:"Low"`
+		Open               float64 `json:"Open"`
+		PrevCls            float64 `json:"PrevCls"`
+		Timestamp          int     `json:"Timestamp"`
+		Volume             float64 `json:"Volume"`
+		Volume24H          float64 `json:"Volume24H"`
+	} `json:"ticker"`
 }

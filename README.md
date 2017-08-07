@@ -22,7 +22,7 @@ glide install
 Build
 
 ```
-go build bitcoin-stats-cmd
+go build *.go
 ./bitcoin-stats-cmd
 ```
 
@@ -37,6 +37,7 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying Kraken (EUR, USD, GBP)
  - Querying Bitfinex (Defined by Config File)
  - Querying Bitsquare (Defined by Config File)
+ - Querying BTCChina (Defined by Config File)
 
 ### Service File
 A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Then run:
@@ -51,7 +52,7 @@ Unless you modify the location of the binary in the service file, you must copy 
 
 ### Future / TODO
  - More Database options (MySQL / Postgres)
- - More Exchanges (BTCC, etc)
+ - More Exchanges
  - Functions which are more dynamic
  - Better logging
  - Automated installation

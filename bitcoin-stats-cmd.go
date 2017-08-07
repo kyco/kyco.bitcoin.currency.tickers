@@ -71,6 +71,10 @@ func bitcoin_prices() {
 		bitsquare_ticker()
 		log.Notice("Ran Bitsquare Ticker")
 
+		// Start btcc ticker
+		btcc_ticker()
+		log.Notice("Ran BTCChina Ticker")
+
 	}
 
 }
@@ -233,6 +237,43 @@ func bitsquare_ticker() {
 	}
 }
 
+// Grabs a snapshot of the current BTCC exchange
+func btcc_ticker() {
+	// In this case, we will loop through all
+	// the tickers set in the config file
+	tickerSplit := strings.Split(config.BTCC.Tickers, ",")
+
+	for i := range tickerSplit {
+
+		// Check if there is any data in the string
+		// if not, skip this loop
+		if len(tickerSplit[i]) < 2 {
+			continue
+		}
+
+		// Make API call to btcc
+		resp := api_call(config.BTCC.URL + tickerSplit[i])
+
+		// Callers should close resp.Body
+		// when done reading from it
+		// Defer the closing of the body
+		defer resp.Body.Close()
+
+		// Fill the record with the data from the JSON
+		var record BTCC
+
+		// Use json.Decode for reading streams of JSON data
+		if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
+			log.Error(err.Error())
+		} else {
+			// Create a timestamp now
+			ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
+			// Insert into SQlite
+			insert_into_sqlite("BTCChina", ts, strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i]))
+		}
+	}
+}
+
 // performs an API call to a URL and returns a JSON body response
 func api_call(urlRequest string) *http.Response {
 
@@ -305,6 +346,8 @@ func setup_sqlite_db() {
 	// else, don't care
 	if _, err := os.Stat(sqliteConnection); os.IsNotExist(err) {
 		sqliteDB := sqlite_open()
+
+		defer sqliteDB.Close() // Don't forget to close
 
 		sqlStmt := `create table exchanges (id integer not null primary key, exchange text, timestamp real, ask real, bid real, volume real default 0, currencyCode text);`
 		_, err = sqliteDB.Exec(sqlStmt)
@@ -408,6 +451,8 @@ func config_init() {
 		bitfinextickers := viper.GetString("exchanges.bitfinex.tickers")
 		bitsquareurl := viper.GetString("exchanges.bitsquare.url")
 		bitsquaretickers := viper.GetString("exchanges.bitsquare.tickers")
+		btccurl := viper.GetString("exchanges.btcc.url")
+		btcctickers := viper.GetString("exchanges.btcc.tickers")
 
 		// Kraken
 		kraken := KrakenConfig{
@@ -438,6 +483,12 @@ func config_init() {
 			Tickers: bitsquaretickers,
 		}
 
+		// Bitsquare
+		btcc := BtccConfig{
+			URL:     btccurl,
+			Tickers: btcctickers,
+		}
+
 		// Main Config
 		config = Config{
 			LogFile:        logFile,
@@ -447,6 +498,7 @@ func config_init() {
 			Bitstamp:       bitstamp,
 			Bitfinex:       bitfinex,
 			Bitsquare:      bitsquare,
+			BTCC:           btcc,
 		}
 	}
 
