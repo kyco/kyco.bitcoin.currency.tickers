@@ -266,10 +266,8 @@ func btcc_ticker() {
 		if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
 			log.Error(err.Error())
 		} else {
-			// Create a timestamp now
-			ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
 			// Insert into SQlite
-			insert_into_sqlite("BTCChina", ts, strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i]))
+			insert_into_sqlite("BTCChina", strconv.FormatInt(record.Ticker.Timestamp, 10), strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i]))
 		}
 	}
 }

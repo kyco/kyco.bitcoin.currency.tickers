@@ -98,7 +98,7 @@ type BTCC struct {
 		Low                float64 `json:"Low"`
 		Open               float64 `json:"Open"`
 		PrevCls            float64 `json:"PrevCls"`
-		Timestamp          int     `json:"Timestamp"`
+		Timestamp          int64   `json:"Timestamp"`
 		Volume             float64 `json:"Volume"`
 		Volume24H          float64 `json:"Volume24H"`
 	} `json:"ticker"`
