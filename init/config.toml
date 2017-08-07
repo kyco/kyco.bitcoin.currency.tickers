@@ -1,37 +1,39 @@
 # Config file to manage bitcoin stats
 
 [config]
-logFile = ""
+logFile = "/tmp/bitcoin-stats.log"
 sqliteLocation = ""
 
 # Exchange specific configs
 [exchanges]
-
-# Kraken URL & API Keys
+# Kraken API Keys
 [exchanges.kraken]
-url = ""
 apiKey = ""
 apiSecrey = ""
 
 # Luno URL
 [exchanges.luno]
-url = ""
+url = "https://api.mybitx.com/api/1/tickers"
 
 # Bitstamp URL
 [exchanges.bitstamp]
-url = ""
+url = "https://www.bitstamp.net/api/v2/ticker_hour/btcusd/"
 
 # Bitfinex URL
 [exchanges.bitfinex]
-url = ""
-tickers = ""
+url = "https://api.bitfinex.com/v1/pubticker/"
+tickers = "btcusd,ethbtc"
+
+# Bittrex URL
+[exchanges.bittrex]
+url = "https://market.bisq.io/api/ticker"
 
 # Bitsquare URL
 [exchanges.bitsquare]
-url = ""
-tickers = ""
+url = "https://market.bisq.io/api/ticker?market="
+tickers = "btc_eur,btc_usd"
 
 # BTCC URL
 [exchanges.btcc]
-url = ""
-tickers = ""
+url = "https://spotusd-data.btcc.com/data/pro/ticker?symbol="
+tickers = "btcusd,"
