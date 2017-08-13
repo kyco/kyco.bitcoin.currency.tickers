@@ -4,8 +4,6 @@
 logFile = "/tmp/bitcoin-stats.log"
 sqliteLocation = ""
 
-# Exchange specific configs
-[exchanges]
 # Kraken API Keys
 [exchanges.kraken]
 apiKey = ""
@@ -37,3 +35,8 @@ tickers = "btc_eur,btc_usd"
 [exchanges.btcc]
 url = "https://spotusd-data.btcc.com/data/pro/ticker?symbol="
 tickers = "btcusd,"
+
+# OKCoin URL
+[exchanges.okcoin]
+url = "https://www.okcoin.com/api/v1/ticker.do?symbol="
+tickers = "btc_usd,"

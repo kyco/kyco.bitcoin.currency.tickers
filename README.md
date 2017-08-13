@@ -22,8 +22,8 @@ glide install
 Build
 
 ```
-go build *.go
-./bitcoin-stats-cmd
+go build
+./kyco.bitcoin.currency.tickers
 ```
 
 ### How it works.
@@ -38,6 +38,7 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying Bitfinex (Defined by Config File)
  - Querying Bitsquare (Defined by Config File)
  - Querying BTCChina (Defined by Config File)
+ - Querying OKCoin (Defined by Config File)
 
 ### Service File
 A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Then run:

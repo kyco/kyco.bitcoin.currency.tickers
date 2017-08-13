@@ -1,5 +1,5 @@
 [Unit]
-Description=BitcoinStats
+Description=kyco.bitcoin.currency.tickers
 
 [Service]
 PIDFile=/tmp/bitcoin-stats.pid

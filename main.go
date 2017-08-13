@@ -75,6 +75,10 @@ func bitcoin_prices() {
 		btcc_ticker()
 		log.Notice("Ran BTCChina Ticker")
 
+		// Start okcoin ticker
+		okcoin_ticker()
+		log.Notice("Ran OKCoin Ticker")
+
 	}
 
 }
@@ -232,7 +236,7 @@ func bitsquare_ticker() {
 			// Create a timestamp now
 			ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
 			// Insert into SQlite
-			insert_into_sqlite("Bitsquare", ts, record[0].Buy, record[0].Sell, record[0].VolumeRight, format_currency_string(tickerSplit[i]))
+			insert_into_sqlite("Bitsquare", ts, record[0].Sell, record[0].Buy, record[0].VolumeRight, format_currency_string(tickerSplit[i]))
 		}
 	}
 }
@@ -267,7 +271,42 @@ func btcc_ticker() {
 			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("BTCChina", strconv.FormatInt((record.Ticker.Timestamp/1000), 10), strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i]))
+			insert_into_sqlite("BTCChina", strconv.FormatInt((record.Ticker.Timestamp/1000), 10), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i]))
+		}
+	}
+}
+
+// Grabs a snapshot of the current OKCoin exchange
+func okcoin_ticker() {
+	// In this case, we will loop through all
+	// the tickers set in the config file
+	tickerSplit := strings.Split(config.OKCoin.Tickers, ",")
+
+	for i := range tickerSplit {
+
+		// Check if there is any data in the string
+		// if not, skip this loop
+		if len(tickerSplit[i]) < 2 {
+			continue
+		}
+
+		// Make API call to OKCoin
+		resp := api_call(config.OKCoin.URL + tickerSplit[i])
+
+		// Callers should close resp.Body
+		// when done reading from it
+		// Defer the closing of the body
+		defer resp.Body.Close()
+
+		// Fill the record with the data from the JSON
+		var record OKCoin
+
+		// Use json.Decode for reading streams of JSON data
+		if err := json.NewDecoder(resp.Body).Decode(&record); err != nil {
+			log.Error(err.Error())
+		} else {
+			// Insert into SQlite
+			insert_into_sqlite("OKCoin", record.Date, record.Ticker.Sell, record.Ticker.Buy, record.Ticker.Vol, format_currency_string(tickerSplit[i]))
 		}
 	}
 }
@@ -451,6 +490,8 @@ func config_init() {
 		bitsquaretickers := viper.GetString("exchanges.bitsquare.tickers")
 		btccurl := viper.GetString("exchanges.btcc.url")
 		btcctickers := viper.GetString("exchanges.btcc.tickers")
+		okcoinurl := viper.GetString("exchanges.okcoin.url")
+		okcointickers := viper.GetString("exchanges.okcoin.tickers")
 
 		// Kraken
 		kraken := KrakenConfig{
@@ -481,10 +522,16 @@ func config_init() {
 			Tickers: bitsquaretickers,
 		}
 
-		// Bitsquare
+		// BTCChina
 		btcc := BtccConfig{
 			URL:     btccurl,
 			Tickers: btcctickers,
+		}
+
+		// OKCoin
+		okcoin := OKCoinConfig{
+			URL:     okcoinurl,
+			Tickers: okcointickers,
 		}
 
 		// Main Config
@@ -497,6 +544,7 @@ func config_init() {
 			Bitfinex:       bitfinex,
 			Bitsquare:      bitsquare,
 			BTCC:           btcc,
+			OKCoin:         okcoin,
 		}
 	}
 
