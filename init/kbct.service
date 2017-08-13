@@ -2,11 +2,11 @@
 Description=kyco.bitcoin.currency.tickers
 
 [Service]
-PIDFile=/tmp/bitcoin-stats.pid
+PIDFile=/tmp/kyco.bitcoin.currency.tickers.pid
 User=user
 Group=user
 Restart=on-failure
-ExecStart=/bin/bash -c '/usr/bin/bitcoin-stats-cmd'
+ExecStart=/bin/bash -c '/usr/bin/kyco.bitcoin.currency.tickers'
 
 [Install]
 WantedBy=multi-user.target

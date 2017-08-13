@@ -35,7 +35,7 @@ var format = logging.MustStringFormatter(
 
 // Setup global home and config folders
 // File location
-var fileLocation string = "/.config/bitcoin-stats/"
+var fileLocation string = "/.config/kyco.bitcoin.currency.tickers/"
 
 // Get home folder
 var home string = os.Getenv("HOME") + fileLocation
@@ -555,10 +555,13 @@ func config_init() {
 		// Re-configure config
 		config_init()
 
+		// Print out what the new config is
+		log.Info("Log file %+v", config)
+
 		// Re-configure logging
 		config_log()
 
-		log.Info("Config file changed:", e.Name)
+		log.Info("Config file changed")
 	})
 }
 
@@ -580,7 +583,7 @@ func main() {
 	go bitcoin_prices()
 
 	// Notify log that we are up and running
-	log.Info("started Bitcoin Stats")
+	log.Info("started kyco.bitcoin.currency.tickers")
 
 	select {}
 }
