@@ -41,10 +41,10 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying OKCoin (Defined by Config File)
 
 ### Service File
-A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Then run:
+A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Change the user in the service file to match the user and group of your choice on your machine. Then run:
 
 ```
-systemctl enable /usr/lib/systemd/user/bitcoin-stats.service
+systemctl enable /usr/lib/systemd/user/kbct.service
 systemctl daemon-reload
 service bitcoin-stats start | status | stop
 ```
