@@ -42,7 +42,7 @@ echo "Compiling binary..."
 sleep 2
 
 # Actually compile it
-go build *.go
+go build
 
 echo "Binary compiled!"
 sleep 2
@@ -51,4 +51,24 @@ sleep 2
 echo "Copying binary to /usr/bin/"
 sleep 2
 echo "Please enter root password to copy binary to /usr/bin/"
-sudo cp bitcoin-stats-cmd /usr/bin/
+sudo mv kyco.bitcoin.currency.tickers /usr/bin/
+
+# Figure out user and group
+iam=$(whoami)
+group=$(id -g -n $iam)
+cp init/kbct.service /tmp
+sed -i -e 's/User=user/User='$iam'/g' /tmp/kbct.service
+sed -i -e 's/Group=user/Group='$group'/g' /tmp/kbct.service
+
+# Copy the service file to /usr/lib/systemd/user/
+echo "Copying service file to /usr/lib/systemd/user/"
+sleep 2
+sudo mv /tmp/kbct.service /usr/lib/systemd/user/
+
+# Configure systemd with new service file
+echo "Configure systemd"
+sleep 2
+sudo systemctl enable /usr/lib/systemd/user/kbct.service; sudo systemctl daemon-reload
+sudo service kbct start
+
+echo "Done! Run the service using 'service kbct start | restart | status | stop'"
