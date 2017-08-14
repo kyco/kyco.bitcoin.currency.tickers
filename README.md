@@ -1,8 +1,18 @@
-### Currency Ticker
+# Currency Ticker
 Written in Golang. This is a project which combines the data from various Bitcoin exchanges around the world.
 
-### How To Run?
+## How To Run?
 
+### Automatically
+Just run 
+
+```
+chmod +x install.sh; ./install.sh
+```
+
+And it will take care of the compiling and installation process for you. You just need to have [go](https://golang.org) installed as well as [glide](https://glide.sh/).
+
+### Manually
 #### Dependencies
 To install the required dependencies to compile your own binaries.
 ```
@@ -26,10 +36,10 @@ go build
 ./kyco.bitcoin.currency.tickers
 ```
 
-### How it works.
+## How it works.
 It queries the APIs of various exchanges (more will be added as time goes by) and pops them into a sqlite database.
 
-### What Works
+## What Works
 At this point in time each exchange is queried every 10 minutes and the results are saved into a sqlite database
 
  - Querying Bitstamp (USD only)
@@ -40,7 +50,7 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying BTCChina (Defined by Config File)
  - Querying OKCoin (Defined by Config File)
 
-### Service File
+## Service File
 A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Change the user in the service file to match the user and group of your choice on your machine. Then run:
 
 ```
@@ -51,7 +61,7 @@ service bitcoin-stats start | status | stop
 
 Unless you modify the location of the binary in the service file, you must copy the compiled binary to ```/usr/bin/```.
 
-### Future / TODO
+## Future / TODO
  - More Database options (MySQL / Postgres)
  - More Exchanges
  - Functions which are more dynamic
