@@ -36,6 +36,17 @@ go build
 ./kyco.bitcoin.currency.tickers
 ```
 
+## Config File
+In both installation types, a config file is required. You'll need to create that manually until I've written an automated way to deal with that.
+
+Create the folder ```kyco.bitcoin.currency.tickers``` in ```~/.config/``` and copy the contents from ```init/config.toml``` into that folder.
+```
+mkdir -p ~/.config/kyco.bitcoin.currency.tickers/
+cp init/config.toml ~/.config/kyco.bitcoin.currency.tickers/
+```
+
+You'll also need to grab an API key from Kraken if you want to use their exchange.
+
 ## How it works.
 It queries the APIs of various exchanges (more will be added as time goes by) and pops them into a sqlite database.
 
