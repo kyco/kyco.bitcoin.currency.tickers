@@ -4,6 +4,7 @@ package main
 type Config struct {
 	LogFile        string
 	SqliteLocation string
+	Port           string
 	Kraken         KrakenConfig
 	Luno           LunoConfig
 	Bitstamp       BitstampConfig
@@ -45,6 +46,17 @@ type BtccConfig struct {
 type OKCoinConfig struct {
 	URL     string
 	Tickers string
+}
+
+// API Response
+type APIStruct struct {
+	Exchange     string  `json:"exchange"`
+	CurrencyCode string  `json:"currencyCode"`
+	Bid          float64 `json:"bid"`
+	Ask          float64 `json:"ask"`
+	Average      float64 `json:"average"`
+	DateUpdated  string  `json:"dateUpdated"`
+	Volume       int64   `json:"volume"`
 }
 
 // Luno Ticker

@@ -3,9 +3,11 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Beldur/kraken-go-api-client"
 	"github.com/fsnotify/fsnotify"
+	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
@@ -39,6 +41,22 @@ var fileLocation string = "/.config/kyco.bitcoin.currency.tickers/"
 
 // Get home folder
 var home string = os.Getenv("HOME") + fileLocation
+
+// Get Exchange rate based on an API call
+func get_exchange_rate(w http.ResponseWriter, req *http.Request) {
+
+	var (
+		params = mux.Vars(req)
+	)
+
+	data, err := query_exchange_sqlite(params["exchange"], params["currencyCode"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	json.NewEncoder(w).Encode(data)
+}
 
 // Initialises various bitcoin price tickers
 func bitcoin_prices() {
@@ -418,6 +436,38 @@ func insert_into_sqlite(exchange string, timestamp string, ask string, bid strin
 	}
 }
 
+// SELECT function ifromnto sqlite
+func query_exchange_sqlite(exchange string, currencyCode string) (resp *APIStruct, err error) {
+
+	// If the exchange name is not there, ignore, otherwise run
+	if len(exchange) > 0 && len(currencyCode) > 0 {
+
+		// Write to DB
+		sqliteDB := sqlite_open()
+
+		// Query for data
+		response := sqliteDB.QueryRow(`select exchange, ask, bid, ((ask + bid) / 2) as price,
+				volume as volume, datetime(timestamp, 'unixepoch') as timestamp, currencyCode
+				from exchanges
+				where currencyCode = ? and exchange = ? order by ID desc LIMIT 1;`, currencyCode, exchange)
+
+		tmp := &APIStruct{}
+		// Scan data into response
+		err := response.Scan(&tmp.Exchange, &tmp.Ask, &tmp.Bid, &tmp.Average, &tmp.Volume, &tmp.DateUpdated, &tmp.CurrencyCode)
+		if err != nil {
+			log.Warning("%q\n", err)
+			return nil, errors.New("No values found")
+		}
+		// Close the sqlite connection
+		sqliteDB.Close()
+
+		// return response
+		return tmp, nil
+	}
+	log.Warning("Nothing was queried!")
+	return nil, errors.New("Exchange or currency code empty")
+}
+
 // clean strings before inserting, to provide default values
 func clean_strings(timestamp *string, ask *string, bid *string, volume *string) {
 	if len(*timestamp) == 0 {
@@ -479,6 +529,7 @@ func config_init() {
 		// ========= CONFIG ================================================================
 		logFile := viper.GetString("config.logFile")
 		sqliteLocation := viper.GetString("config.sqliteLocation")
+		port := viper.GetString("config.port")
 		krakenurl := viper.GetString("exchanges.kraken.url")
 		krakenAPIKey := viper.GetString("exchanges.kraken.apiKey")
 		krakenAPISecret := viper.GetString("exchanges.kraken.apiSecret")
@@ -538,6 +589,7 @@ func config_init() {
 		config = Config{
 			LogFile:        logFile,
 			SqliteLocation: sqliteLocation,
+			Port:           port,
 			Kraken:         kraken,
 			Luno:           luno,
 			Bitstamp:       bitstamp,
@@ -585,5 +637,12 @@ func main() {
 	// Notify log that we are up and running
 	log.Info("started kyco.bitcoin.currency.tickers")
 
-	select {}
+	// Setup API
+	router := mux.NewRouter()
+
+	// Setup Route
+	router.HandleFunc("/{exchange}/{currencyCode}", get_exchange_rate).Methods("GET")
+
+	// Create listen and serve
+	http.ListenAndServe(":"+config.Port, router)
 }

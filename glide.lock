@@ -1,5 +1,5 @@
-hash: a210c64a8dc322d83c7a43e2d9249c8dd244442e4c20afa66486a296f6632396
-updated: 2017-07-18T12:27:11.910172506+02:00
+hash: af33fd69f05ca70164b4147da6e6bf0f1bfae6f783ffdce7569a89046cb4ec84
+updated: 2017-08-17T05:59:53.810654406+02:00
 imports:
 - name: github.com/Beldur/kraken-go-api-client
   version: f82698e146d5570c0ebc54cb979edc51827f7c52
@@ -7,6 +7,10 @@ imports:
   version: 629574ca2a5df945712d3079857300b5e4da0236
 - name: github.com/gizak/termui
   version: 24acd523c756fd9728824cdfac66aad9d8982fb7
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/mux
+  version: bcd8bc72b08df0f70df986b97f95590779502d31
 - name: github.com/hashicorp/hcl
   version: 392dba7d905ed5d04a5794ba89f558b27e2ba1ca
   subpackages:
@@ -20,20 +24,10 @@ imports:
   - json/token
 - name: github.com/magiconair/properties
   version: be5ece7dd465ab0765a9682137865547526d1dfb
-- name: github.com/maruel/panicparse
-  version: 868abbf1ebac0fb2760cd9a410a5bd2f5afb2f76
-  subpackages:
-  - stack
-- name: github.com/mattn/go-runewidth
-  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/mattn/go-sqlite3
   version: ca5e3819723d8eeaf170ad510e7da1d6d2e94a08
-- name: github.com/mitchellh/go-wordwrap
-  version: ad45545899c7b13c020ea92b2072220eefad42b8
 - name: github.com/mitchellh/mapstructure
   version: d0303fe809921458f417bcf828397a65db30a7e4
-- name: github.com/nsf/termbox-go
-  version: 4ed959e0540971545eddb8c75514973d670cf739
 - name: github.com/op/go-logging
   version: b2cb9fa56473e98db8caba80237377e83fe44db5
 - name: github.com/pelletier/go-toml

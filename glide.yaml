@@ -10,3 +10,5 @@ import:
 - package: github.com/op/go-logging
   version: ^1.0.0
 - package: github.com/spf13/viper
+- package: github.com/gorilla/mux
+  version: ^1.4.0

@@ -3,6 +3,7 @@
 [config]
 logFile = "/tmp/bitcoin-stats.log"
 sqliteLocation = ""
+port = "9091"
 
 # Kraken API Keys
 [exchanges.kraken]
