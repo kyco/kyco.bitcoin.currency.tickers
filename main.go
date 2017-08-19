@@ -61,6 +61,53 @@ func get_exchange_rate(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
+// Get Exchange data based on an API call
+func show_exchange_methods(w http.ResponseWriter, req *http.Request) {
+
+	var (
+		params = mux.Vars(req)
+		url    = ""
+	)
+
+	// Get the URL
+	url = req.Host + "/" + params["exchange"] + "/"
+
+	// Grab exchange data
+	data, err := query_exchange_currency_codes_sqlite(params["exchange"], url)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Infof("Called: %s -> %s\n", params["exchange"])
+
+	// Return exchange data
+	json.NewEncoder(w).Encode(data)
+}
+
+// Get list of exchanges
+func show_exchanges(w http.ResponseWriter, req *http.Request) {
+
+	var (
+		url = ""
+	)
+
+	// Get the URL
+	url = req.Host + "/"
+
+	// Grab exchange data
+	data, err := query_list_of_exchanges(url)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Infof("Called Root Page")
+
+	// Return exchange data
+	json.NewEncoder(w).Encode(data)
+}
+
 // Initialises various bitcoin price tickers
 func bitcoin_prices() {
 
@@ -477,7 +524,7 @@ func query_exchange_sqlite(exchange string, currencyCode string) (resp *APIStruc
 		sqliteDB := sqlite_open()
 
 		// Query for data
-		response := sqliteDB.QueryRow(`select exchange, ask, bid, ((ask + bid) / 2) as price,
+		response := sqliteDB.QueryRow(`select exchange, ask, bid, ROUND((ask + bid) / 2, 8) as price,
 				volume as volume, datetime(timestamp, 'unixepoch') as timestamp, currencyCode
 				from exchanges
 				where currencyCode = ? and exchange = ? order by ID desc LIMIT 1;`, currencyCode, exchange)
@@ -497,6 +544,76 @@ func query_exchange_sqlite(exchange string, currencyCode string) (resp *APIStruc
 	}
 	log.Warning("Nothing was queried!")
 	return nil, errors.New("Exchange or currency code empty")
+}
+
+// SELECT function ifromnto sqlite
+func query_exchange_currency_codes_sqlite(exchange string, url string) (resp []*string, err error) {
+
+	// If the exchange name is not there, ignore, otherwise run
+	if len(exchange) > 0 {
+
+		// Write to DB
+		sqliteDB := sqlite_open()
+
+		// Query for data
+		response, err := sqliteDB.Query(`select DISTINCT currencyCode from exchanges where exchange = ?;`, exchange)
+		// Check if there are errors
+		if err != nil {
+			log.Error(err.Error())
+			return nil, err
+		} else {
+			// Scan the values into a string slice
+			for response.Next() {
+				var tmp string
+				response.Scan(&tmp)
+				tmp = url + tmp
+				resp = append(resp, &tmp)
+			}
+
+			// If anything was returned
+			if len(resp) == 0 {
+				return nil, errors.New("Exchange doesn't exist")
+			}
+
+		}
+
+		// return response
+		return resp, nil
+	}
+	log.Warning("Nothing was queried!")
+	return nil, errors.New("Exchange doesn't exists")
+}
+
+// SELECT function sqlite
+func query_list_of_exchanges(url string) (resp []*string, err error) {
+
+	// Write to DB
+	sqliteDB := sqlite_open()
+
+	// Query for data
+	response, err := sqliteDB.Query(`select DISTINCT exchange from exchanges;`)
+	// Check if there are errors
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	} else {
+		// Scan the values into a string slice
+		for response.Next() {
+			var tmp string
+			response.Scan(&tmp)
+			tmp = url + tmp
+			resp = append(resp, &tmp)
+		}
+
+		// If anything was returned
+		if len(resp) == 0 {
+			return nil, errors.New("No exchanges exist")
+		}
+
+	}
+
+	// return response
+	return resp, nil
 }
 
 // clean strings before inserting, to provide default values
@@ -672,7 +789,7 @@ func main() {
 	setup_sqlite_db()
 
 	// Start bitcoin ticker
-	go bitcoin_prices()
+	// go bitcoin_prices()
 
 	// Notify log that we are up and running
 	log.Info("started kyco.bitcoin.currency.tickers")
@@ -682,6 +799,8 @@ func main() {
 
 	// Setup Route
 	router.HandleFunc("/{exchange}/{currencyCode}", get_exchange_rate).Methods("GET")
+	router.HandleFunc("/{exchange}", show_exchange_methods).Methods("GET")
+	router.HandleFunc("/", show_exchanges).Methods("GET")
 
 	// Create listen and serve
 	http.ListenAndServe(":"+config.Port, router)
