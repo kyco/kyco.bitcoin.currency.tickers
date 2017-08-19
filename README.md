@@ -60,6 +60,7 @@ At this point in time each exchange is queried every 10 minutes and the results 
  - Querying Bitsquare (Defined by Config File)
  - Querying BTCChina (Defined by Config File)
  - Querying OKCoin (Defined by Config File)
+ - Querying Poloniex (All Supported Tickers)
 
 ## Service File
 A service file for linux exists in the folder ```init```. Copy this to ```/usr/lib/systemd/user/```. Change the user in the service file to match the user and group of your choice on your machine. Then run:
