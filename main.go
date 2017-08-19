@@ -70,7 +70,7 @@ func show_exchange_methods(w http.ResponseWriter, req *http.Request) {
 	)
 
 	// Get the URL
-	url = req.Host + "/" + params["exchange"] + "/"
+	url = "http://" + req.Header.Get("X-Forwarded-Server") + "/" + params["exchange"] + "/"
 
 	// Grab exchange data
 	data, err := query_exchange_currency_codes_sqlite(params["exchange"], url)
@@ -79,7 +79,7 @@ func show_exchange_methods(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Infof("Called: %s -> %s\n", params["exchange"])
+	log.Infof("Called: %s\n", params["exchange"])
 
 	// Return exchange data
 	json.NewEncoder(w).Encode(data)
@@ -93,7 +93,7 @@ func show_exchanges(w http.ResponseWriter, req *http.Request) {
 	)
 
 	// Get the URL
-	url = req.Host + "/"
+	url = "http://" + req.Header.Get("X-Forwarded-Server") + "/"
 
 	// Grab exchange data
 	data, err := query_list_of_exchanges(url)
@@ -789,7 +789,7 @@ func main() {
 	setup_sqlite_db()
 
 	// Start bitcoin ticker
-	// go bitcoin_prices()
+	go bitcoin_prices()
 
 	// Notify log that we are up and running
 	log.Info("started kyco.bitcoin.currency.tickers")

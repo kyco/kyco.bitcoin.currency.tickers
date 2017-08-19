@@ -1,6 +1,9 @@
 # Ignore all
 *
 
+# Ignore Binary
+kyco.bitcoin.currency.tickers
+
 # Unignore all with extensions
 !*.*
 
