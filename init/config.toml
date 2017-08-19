@@ -41,3 +41,8 @@ tickers = "btcusd,"
 [exchanges.okcoin]
 url = "https://www.okcoin.com/api/v1/ticker.do?symbol="
 tickers = "btc_usd,"
+
+# Poloniex URL
+[exchanges.poloniex]
+apiKey = ""
+apiSecrey = ""

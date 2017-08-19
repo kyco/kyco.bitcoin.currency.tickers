@@ -12,6 +12,7 @@ type Config struct {
 	Bitsquare      BitsquareConfig
 	BTCC           BtccConfig
 	OKCoin         OKCoinConfig
+	Poloniex       PoloniexConfig
 }
 
 type KrakenConfig struct {
@@ -48,6 +49,11 @@ type OKCoinConfig struct {
 	Tickers string
 }
 
+type PoloniexConfig struct {
+	APIKey    string
+	APISecret string
+}
+
 // API Response
 type APIStruct struct {
 	Exchange     string  `json:"exchange"`
@@ -56,7 +62,7 @@ type APIStruct struct {
 	Ask          float64 `json:"ask"`
 	Average      float64 `json:"average"`
 	DateUpdated  string  `json:"dateUpdated"`
-	Volume       int64   `json:"volume"`
+	Volume       float64 `json:"volume"`
 }
 
 // Luno Ticker

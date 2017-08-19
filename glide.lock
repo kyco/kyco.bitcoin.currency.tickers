@@ -1,5 +1,5 @@
-hash: af33fd69f05ca70164b4147da6e6bf0f1bfae6f783ffdce7569a89046cb4ec84
-updated: 2017-08-17T05:59:53.810654406+02:00
+hash: 44cef97d69944f7af7c40f38ddc82f3848552466ff17e46410fb054c89b40bb4
+updated: 2017-08-19T08:02:03.123420727+02:00
 imports:
 - name: github.com/Beldur/kraken-go-api-client
   version: f82698e146d5570c0ebc54cb979edc51827f7c52
@@ -22,6 +22,8 @@ imports:
   - json/parser
   - json/scanner
   - json/token
+- name: github.com/jyap808/go-poloniex
+  version: b3c99d366d00474b327ac1e17af8b5d188d4eebf
 - name: github.com/magiconair/properties
   version: be5ece7dd465ab0765a9682137865547526d1dfb
 - name: github.com/mattn/go-sqlite3

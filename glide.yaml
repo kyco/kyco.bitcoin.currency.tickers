@@ -12,3 +12,4 @@ import:
 - package: github.com/spf13/viper
 - package: github.com/gorilla/mux
   version: ^1.4.0
+- package: github.com/jyap808/go-poloniex

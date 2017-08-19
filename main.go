@@ -8,6 +8,7 @@ import (
 	"github.com/Beldur/kraken-go-api-client"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
+	"github.com/jyap808/go-poloniex"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
@@ -55,6 +56,8 @@ func get_exchange_rate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	log.Infof("Called: %s -> %s\n", params["exchange"], params["currencyCode"])
+
 	json.NewEncoder(w).Encode(data)
 }
 
@@ -62,12 +65,12 @@ func get_exchange_rate(w http.ResponseWriter, req *http.Request) {
 func bitcoin_prices() {
 
 	// Tick on the minute
-	t := minuteTicker()
+	// t := minuteTicker()
 
 	for {
 
 		// wait for the tick
-		<-t.C
+		// <-t.C
 
 		// Start luno ticker
 		luno_ticker()
@@ -96,6 +99,12 @@ func bitcoin_prices() {
 		// Start okcoin ticker
 		okcoin_ticker()
 		log.Notice("Ran OKCoin Ticker")
+
+		// Start poloniex ticker
+		poloniex_ticker()
+		log.Notice("Ran Poloniex Ticker")
+
+		time.Sleep(10 * time.Minute)
 
 	}
 
@@ -329,6 +338,28 @@ func okcoin_ticker() {
 	}
 }
 
+// Grabs a snapshot of the current Poloniex exchange
+func poloniex_ticker() {
+
+	// Init Poloniex client
+	polClient := poloniex.New(config.Poloniex.APIKey, config.Poloniex.APISecret)
+
+	// Get ticker data
+	tickers, err := polClient.GetTickers()
+
+	// Check if we had an error, if we did, log it
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		// Create a timestamp now
+		ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
+		for key, ticker := range tickers {
+			// Insert into SQlite
+			insert_into_sqlite("Poloniex", ts, strconv.FormatFloat(ticker.LowestAsk, 'f', 8, 64), strconv.FormatFloat(ticker.HighestBid, 'f', 8, 64), strconv.FormatFloat(ticker.BaseVolume, 'f', 8, 64), key)
+		}
+	}
+}
+
 // performs an API call to a URL and returns a JSON body response
 func api_call(urlRequest string) *http.Response {
 
@@ -367,7 +398,7 @@ func api_call(urlRequest string) *http.Response {
 
 // formats the currency code into something more standard
 func format_currency_string(currencyCode string) string {
-	return strings.ToUpper(strings.Replace(strings.Replace(currencyCode, "btc", "", -1), "_", "", -1))
+	return strings.ToUpper(strings.Replace(strings.Replace(strings.Replace(currencyCode, "btc", "", -1), "_", "", -1), "BTC", "", -1))
 }
 
 // Check for and print/panic on errors
@@ -543,6 +574,8 @@ func config_init() {
 		btcctickers := viper.GetString("exchanges.btcc.tickers")
 		okcoinurl := viper.GetString("exchanges.okcoin.url")
 		okcointickers := viper.GetString("exchanges.okcoin.tickers")
+		poloniexAPIKey := viper.GetString("exchanges.poloniex.apiKey")
+		poloniexAPISecret := viper.GetString("exchanges.poloniex.apiSecret")
 
 		// Kraken
 		kraken := KrakenConfig{
@@ -585,6 +618,12 @@ func config_init() {
 			Tickers: okcointickers,
 		}
 
+		// Poloniex
+		poloniex := PoloniexConfig{
+			APIKey:    poloniexAPIKey,
+			APISecret: poloniexAPISecret,
+		}
+
 		// Main Config
 		config = Config{
 			LogFile:        logFile,
@@ -597,6 +636,7 @@ func config_init() {
 			Bitsquare:      bitsquare,
 			BTCC:           btcc,
 			OKCoin:         okcoin,
+			Poloniex:       poloniex,
 		}
 	}
 
