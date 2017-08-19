@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/viper"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -216,30 +217,25 @@ func kraken_ticker() {
 	api := krakenapi.New(config.Kraken.APIKey, config.Kraken.APISecret)
 
 	// There are also some strongly typed methods available
-	tickerEUR, err := api.Ticker(krakenapi.XXBTZEUR)
+	ticker, err := api.Ticker(krakenapi.XXBTZEUR, krakenapi.XXBTZUSD, krakenapi.XXBTZGBP, krakenapi.DASHXBT, krakenapi.XETCXXBT, krakenapi.XLTCXXBT)
 	if err != nil {
 		log.Error(err.Error())
 	} else {
-		// Insert into SQlite
-		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerEUR.XXBTZEUR.Ask[0], tickerEUR.XXBTZEUR.Bid[0], tickerEUR.XXBTZEUR.Volume[0], "EUR")
-	}
 
-	// There are also some strongly typed methods available
-	tickerUSD, err := api.Ticker(krakenapi.XXBTZUSD)
-	if err != nil {
-		log.Error(err.Error())
-	} else {
-		// Insert into SQlite
-		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerUSD.XXBTZUSD.Ask[0], tickerUSD.XXBTZUSD.Bid[0], tickerUSD.XXBTZUSD.Volume[0], "USD")
-	}
+		v := reflect.ValueOf(ticker).Elem()
+		typeOfT := v.Type()
+		for j := 0; j < v.NumField(); j++ {
 
-	// There are also some strongly typed methods available
-	tickerGBP, err := api.Ticker(krakenapi.XXBTZGBP)
-	if err != nil {
-		log.Error(err.Error())
-	} else {
-		// Insert into SQlite
-		insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), tickerGBP.XXBTZGBP.Ask[0], tickerGBP.XXBTZGBP.Bid[0], tickerGBP.XXBTZGBP.Volume[0], "GBP")
+			f := v.Field(j)
+			inter := f.Interface().(krakenapi.PairTickerInfo)
+
+			// Check if the ask value is empty
+			if len(inter.Ask) > 0 {
+
+				// Insert into SQlite
+				insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), inter.Ask[0], inter.Bid[0], inter.Volume[0], format_currency_string(typeOfT.Field(j).Name, "Kraken"))
+			}
+		}
 	}
 }
 
@@ -273,7 +269,7 @@ func bitfinex_ticker() {
 			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("Bitfinex", record.Timestamp, record.Ask, record.Bid, record.Volume, format_currency_string(tickerSplit[i]))
+			insert_into_sqlite("Bitfinex", record.Timestamp, record.Ask, record.Bid, record.Volume, format_currency_string(tickerSplit[i], "Bitfinex"))
 		}
 	}
 }
@@ -310,7 +306,7 @@ func bitsquare_ticker() {
 			// Create a timestamp now
 			ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
 			// Insert into SQlite
-			insert_into_sqlite("Bitsquare", ts, record[0].Sell, record[0].Buy, record[0].VolumeRight, format_currency_string(tickerSplit[i]))
+			insert_into_sqlite("Bitsquare", ts, record[0].Sell, record[0].Buy, record[0].VolumeRight, format_currency_string(tickerSplit[i], "Bitsquare"))
 		}
 	}
 }
@@ -345,7 +341,7 @@ func btcc_ticker() {
 			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("BTCChina", strconv.FormatInt((record.Ticker.Timestamp/1000), 10), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i]))
+			insert_into_sqlite("BTCChina", strconv.FormatInt((record.Ticker.Timestamp/1000), 10), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i], "btcc"))
 		}
 	}
 }
@@ -380,7 +376,7 @@ func okcoin_ticker() {
 			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("OKCoin", record.Date, record.Ticker.Sell, record.Ticker.Buy, record.Ticker.Vol, format_currency_string(tickerSplit[i]))
+			insert_into_sqlite("OKCoin", record.Date, record.Ticker.Sell, record.Ticker.Buy, record.Ticker.Vol, format_currency_string(tickerSplit[i], "okcoin"))
 		}
 	}
 }
@@ -444,8 +440,20 @@ func api_call(urlRequest string) *http.Response {
 }
 
 // formats the currency code into something more standard
-func format_currency_string(currencyCode string) string {
-	return strings.ToUpper(strings.Replace(strings.Replace(strings.Replace(currencyCode, "btc", "", -1), "_", "", -1), "BTC", "", -1))
+func format_currency_string(currencyCode string, exchange string) string {
+	// Replace BTC
+	replaceBTC := strings.Replace(strings.ToUpper(currencyCode), "BTC", "", -1)
+
+	// Perform extra replacements with Kraken
+	if exchange == "Kraken" {
+		replaceBTC = strings.Replace(replaceBTC, "XBTC", "", -1)
+		replaceBTC = strings.Replace(replaceBTC, "XXBTZ", "", -1)
+		replaceBTC = strings.Replace(replaceBTC, "XXBT", "", -1)
+		replaceBTC = strings.Replace(replaceBTC, "X", "", -1)
+		replaceBTC = strings.Replace(replaceBTC, "DASHBT", "DASH", -1)
+	}
+	replaceBTC = strings.Replace(replaceBTC, "_", "", -1)
+	return replaceBTC
 }
 
 // Check for and print/panic on errors
