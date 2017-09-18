@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/Beldur/kraken-go-api-client"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
@@ -12,12 +19,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"net/http"
-	"os"
-	"reflect"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var err error
@@ -51,7 +52,7 @@ func get_exchange_rate(w http.ResponseWriter, req *http.Request) {
 		params = mux.Vars(req)
 	)
 
-	data, err := query_exchange_sqlite(params["exchange"], params["currencyCode"])
+	data, err := queryExchangeSQLite(params["exchange"], params["currencyCode"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -74,7 +75,7 @@ func show_exchange_methods(w http.ResponseWriter, req *http.Request) {
 	url = "http://" + req.Header.Get("X-Forwarded-Server") + "/" + params["exchange"] + "/"
 
 	// Grab exchange data
-	data, err := query_exchange_currency_codes_sqlite(params["exchange"], url)
+	data, err := queryExchangeCurrencyCodesSQLite(params["exchange"], url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -87,7 +88,7 @@ func show_exchange_methods(w http.ResponseWriter, req *http.Request) {
 }
 
 // Get list of exchanges
-func show_exchanges(w http.ResponseWriter, req *http.Request) {
+func showExchanges(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		url = ""
@@ -97,7 +98,7 @@ func show_exchanges(w http.ResponseWriter, req *http.Request) {
 	url = "http://" + req.Header.Get("X-Forwarded-Server") + "/"
 
 	// Grab exchange data
-	data, err := query_list_of_exchanges(url)
+	data, err := queryListOfExchanges(url)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -110,7 +111,7 @@ func show_exchanges(w http.ResponseWriter, req *http.Request) {
 }
 
 // Initialises various bitcoin price tickers
-func bitcoin_prices() {
+func bitcoinPrices() {
 
 	// Tick on the minute
 	// t := minuteTicker()
@@ -121,35 +122,35 @@ func bitcoin_prices() {
 		// <-t.C
 
 		// Start luno ticker
-		luno_ticker()
+		lunoTicker()
 		log.Notice("Ran Luno Ticker")
 
 		// Start bitstamp ticker
-		bitstamp_ticker()
+		bitstampTicker()
 		log.Notice("Ran Bitstamp Ticker")
 
 		// Start kraken ticker
-		kraken_ticker()
+		krakenTicker()
 		log.Notice("Ran Kraken Ticker")
 
 		// Start bitfinex ticker
-		bitfinex_ticker()
+		bitfinexTicker()
 		log.Notice("Ran Bitfinex Ticker")
 
 		// Start bitsquare ticker
-		bitsquare_ticker()
+		bitsquareTicker()
 		log.Notice("Ran Bitsquare Ticker")
 
 		// Start btcc ticker
-		btcc_ticker()
+		btccTicker()
 		log.Notice("Ran BTCChina Ticker")
 
 		// Start okcoin ticker
-		okcoin_ticker()
+		okcoinTicker()
 		log.Notice("Ran OKCoin Ticker")
 
 		// Start poloniex ticker
-		poloniex_ticker()
+		poloniexTicker()
 		log.Notice("Ran Poloniex Ticker")
 
 		time.Sleep(10 * time.Minute)
@@ -159,9 +160,13 @@ func bitcoin_prices() {
 }
 
 // Grabs a snapshot of the current luno exchange
-func luno_ticker() {
+func lunoTicker() {
 	// Make API call to luno
-	resp := api_call(config.Luno.URL)
+	resp := apiCall(config.Luno.URL)
+	// If an empty response was returned
+	if resp == nil {
+		return
+	}
 
 	// Callers should close resp.Body
 	// when done reading from it
@@ -180,15 +185,20 @@ func luno_ticker() {
 		for i := range record.Tickers {
 			// Format timestamp as string
 			timestampString := strconv.FormatInt(time.Now().Unix(), 10)
-			insert_into_sqlite("Luno", timestampString, record.Tickers[i].Ask, record.Tickers[i].Bid, "1", record.Tickers[i].Pair[3:])
+			insertIntoSQLite("Luno", timestampString, record.Tickers[i].Ask, record.Tickers[i].Bid, "1", record.Tickers[i].Pair[3:])
 		}
 	}
 }
 
 // Grabs a snapshot of the current bitstamp exchange
-func bitstamp_ticker() {
+func bitstampTicker() {
 	// Make API call to bitstamp
-	resp := api_call(config.Bitstamp.URL)
+	resp := apiCall(config.Bitstamp.URL)
+
+	// If an empty response was returned
+	if resp == nil {
+		return
+	}
 
 	// Callers should close resp.Body
 	// when done reading from it
@@ -203,12 +213,12 @@ func bitstamp_ticker() {
 		log.Error(err.Error())
 	} else {
 		// Insert into SQlite
-		insert_into_sqlite("Bitstamp", record.Timestamp, record.Ask, record.Bid, record.Volume, "USD")
+		insertIntoSQLite("Bitstamp", record.Timestamp, record.Ask, record.Bid, record.Volume, "USD")
 	}
 }
 
 // Gets ticker data from kraken
-func kraken_ticker() {
+func krakenTicker() {
 	// If the API keys are not present, just return
 	if len(config.Kraken.APIKey) == 0 && len(config.Kraken.APISecret) == 0 {
 		return
@@ -233,14 +243,14 @@ func kraken_ticker() {
 			if len(inter.Ask) > 0 {
 
 				// Insert into SQlite
-				insert_into_sqlite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), inter.Ask[0], inter.Bid[0], inter.Volume[0], format_currency_string(typeOfT.Field(j).Name, "Kraken"))
+				insertIntoSQLite("Kraken", strconv.FormatInt(int64(time.Now().Unix()), 10), inter.Ask[0], inter.Bid[0], inter.Volume[0], formatCurrencyString(typeOfT.Field(j).Name, "Kraken"))
 			}
 		}
 	}
 }
 
 // Grabs a snapshot of the current bitfinex exchange
-func bitfinex_ticker() {
+func bitfinexTicker() {
 	// In this case, we will loop through all
 	// the tickers set in the config file
 	tickerSplit := strings.Split(config.Bitfinex.Tickers, ",")
@@ -254,7 +264,12 @@ func bitfinex_ticker() {
 		}
 
 		// Make API call to bitfinex
-		resp := api_call(config.Bitfinex.URL + tickerSplit[i])
+		resp := apiCall(config.Bitfinex.URL + tickerSplit[i])
+
+		// If an empty response was returned
+		if resp == nil {
+			continue
+		}
 
 		// Callers should close resp.Body
 		// when done reading from it
@@ -269,13 +284,13 @@ func bitfinex_ticker() {
 			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("Bitfinex", record.Timestamp, record.Ask, record.Bid, record.Volume, format_currency_string(tickerSplit[i], "Bitfinex"))
+			insertIntoSQLite("Bitfinex", record.Timestamp, record.Ask, record.Bid, record.Volume, formatCurrencyString(tickerSplit[i], "Bitfinex"))
 		}
 	}
 }
 
 // Grabs a snapshot of the current bitsquare exchange
-func bitsquare_ticker() {
+func bitsquareTicker() {
 	// In this case, we will loop through all
 	// the tickers set in the config file
 	tickerSplit := strings.Split(config.Bitsquare.Tickers, ",")
@@ -289,7 +304,12 @@ func bitsquare_ticker() {
 		}
 
 		// Make API call to bitsquare
-		resp := api_call(config.Bitsquare.URL + tickerSplit[i])
+		resp := apiCall(config.Bitsquare.URL + tickerSplit[i])
+
+		// If an empty response was returned
+		if resp == nil {
+			continue
+		}
 
 		// Callers should close resp.Body
 		// when done reading from it
@@ -306,13 +326,13 @@ func bitsquare_ticker() {
 			// Create a timestamp now
 			ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
 			// Insert into SQlite
-			insert_into_sqlite("Bitsquare", ts, record[0].Sell, record[0].Buy, record[0].VolumeRight, format_currency_string(tickerSplit[i], "Bitsquare"))
+			insertIntoSQLite("Bitsquare", ts, record[0].Sell, record[0].Buy, record[0].VolumeRight, formatCurrencyString(tickerSplit[i], "Bitsquare"))
 		}
 	}
 }
 
 // Grabs a snapshot of the current BTCC exchange
-func btcc_ticker() {
+func btccTicker() {
 	// In this case, we will loop through all
 	// the tickers set in the config file
 	tickerSplit := strings.Split(config.BTCC.Tickers, ",")
@@ -326,7 +346,7 @@ func btcc_ticker() {
 		}
 
 		// Make API call to btcc
-		resp := api_call(config.BTCC.URL + tickerSplit[i])
+		resp := apiCall(config.BTCC.URL + tickerSplit[i])
 
 		// Callers should close resp.Body
 		// when done reading from it
@@ -341,13 +361,13 @@ func btcc_ticker() {
 			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("BTCChina", strconv.FormatInt((record.Ticker.Timestamp/1000), 10), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), format_currency_string(tickerSplit[i], "btcc"))
+			insertIntoSQLite("BTCChina", strconv.FormatInt((record.Ticker.Timestamp/1000), 10), strconv.FormatFloat(record.Ticker.AskPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.BidPrice, 'f', 2, 64), strconv.FormatFloat(record.Ticker.Volume, 'f', 2, 64), formatCurrencyString(tickerSplit[i], "btcc"))
 		}
 	}
 }
 
 // Grabs a snapshot of the current OKCoin exchange
-func okcoin_ticker() {
+func okcoinTicker() {
 	// In this case, we will loop through all
 	// the tickers set in the config file
 	tickerSplit := strings.Split(config.OKCoin.Tickers, ",")
@@ -361,7 +381,12 @@ func okcoin_ticker() {
 		}
 
 		// Make API call to OKCoin
-		resp := api_call(config.OKCoin.URL + tickerSplit[i])
+		resp := apiCall(config.OKCoin.URL + tickerSplit[i])
+
+		// If an empty response was returned
+		if resp == nil {
+			continue
+		}
 
 		// Callers should close resp.Body
 		// when done reading from it
@@ -376,13 +401,13 @@ func okcoin_ticker() {
 			log.Error(err.Error())
 		} else {
 			// Insert into SQlite
-			insert_into_sqlite("OKCoin", record.Date, record.Ticker.Sell, record.Ticker.Buy, record.Ticker.Vol, format_currency_string(tickerSplit[i], "okcoin"))
+			insertIntoSQLite("OKCoin", record.Date, record.Ticker.Sell, record.Ticker.Buy, record.Ticker.Vol, formatCurrencyString(tickerSplit[i], "okcoin"))
 		}
 	}
 }
 
 // Grabs a snapshot of the current Poloniex exchange
-func poloniex_ticker() {
+func poloniexTicker() {
 
 	// Init Poloniex client
 	polClient := poloniex.New(config.Poloniex.APIKey, config.Poloniex.APISecret)
@@ -398,13 +423,13 @@ func poloniex_ticker() {
 		ts := strconv.FormatInt(int64(time.Now().Unix()), 10)
 		for key, ticker := range tickers {
 			// Insert into SQlite
-			insert_into_sqlite("Poloniex", ts, strconv.FormatFloat(ticker.LowestAsk, 'f', 8, 64), strconv.FormatFloat(ticker.HighestBid, 'f', 8, 64), strconv.FormatFloat(ticker.BaseVolume, 'f', 8, 64), key)
+			insertIntoSQLite("Poloniex", ts, strconv.FormatFloat(ticker.LowestAsk, 'f', 8, 64), strconv.FormatFloat(ticker.HighestBid, 'f', 8, 64), strconv.FormatFloat(ticker.BaseVolume, 'f', 8, 64), key)
 		}
 	}
 }
 
 // performs an API call to a URL and returns a JSON body response
-func api_call(urlRequest string) *http.Response {
+func apiCall(urlRequest string) *http.Response {
 
 	url := fmt.Sprintf(urlRequest)
 
@@ -440,7 +465,7 @@ func api_call(urlRequest string) *http.Response {
 }
 
 // formats the currency code into something more standard
-func format_currency_string(currencyCode string, exchange string) string {
+func formatCurrencyString(currencyCode string, exchange string) string {
 	// Replace BTC
 	replaceBTC := strings.Replace(strings.ToUpper(currencyCode), "BTC", "", -1)
 
@@ -464,7 +489,7 @@ func check(e error) {
 }
 
 // Open SQlite Connection
-func sqlite_open() *sql.DB {
+func sqliteOpen() *sql.DB {
 	db, err := sql.Open("sqlite3", home+"/data.db")
 	if err != nil {
 		log.Error(err.Error())
@@ -473,7 +498,7 @@ func sqlite_open() *sql.DB {
 }
 
 // Sets up the sqlite databases and connections
-func setup_sqlite_db() {
+func setupSQLiteDB() {
 	// Setup sqlite connection
 	var sqliteConnection string
 
@@ -486,7 +511,7 @@ func setup_sqlite_db() {
 	// Check if the sqlite database already exists, if it does not, continue
 	// else, don't care
 	if _, err := os.Stat(sqliteConnection); os.IsNotExist(err) {
-		sqliteDB := sqlite_open()
+		sqliteDB := sqliteOpen()
 
 		defer sqliteDB.Close() // Don't forget to close
 
@@ -500,16 +525,16 @@ func setup_sqlite_db() {
 }
 
 // Insert function into sqlite
-func insert_into_sqlite(exchange string, timestamp string, ask string, bid string, volume string, currencyCode string) {
+func insertIntoSQLite(exchange string, timestamp string, ask string, bid string, volume string, currencyCode string) {
 
 	// If the exchange name is not there, ignore, otherwise run
 	if len(exchange) > 0 && len(currencyCode) > 0 {
 
 		// Clean strings, if the string doesn't contain anything, default
-		clean_strings(&timestamp, &ask, &bid, &volume)
+		cleanStrings(&timestamp, &ask, &bid, &volume)
 
 		// Write to DB
-		sqliteDB := sqlite_open()
+		sqliteDB := sqliteOpen()
 		// Insert the database record
 		sqlStmt := `insert into exchanges (exchange, timestamp, ask, bid, volume, currencyCode) values ('` + exchange + `',` + timestamp + `, ` + ask + `,` + bid + `, ` + volume + `, '` + currencyCode + `');`
 		_, err = sqliteDB.Exec(sqlStmt)
@@ -523,13 +548,13 @@ func insert_into_sqlite(exchange string, timestamp string, ask string, bid strin
 }
 
 // SELECT function ifromnto sqlite
-func query_exchange_sqlite(exchange string, currencyCode string) (resp *APIStruct, err error) {
+func queryExchangeSQLite(exchange string, currencyCode string) (resp *APIStruct, err error) {
 
 	// If the exchange name is not there, ignore, otherwise run
 	if len(exchange) > 0 && len(currencyCode) > 0 {
 
 		// Write to DB
-		sqliteDB := sqlite_open()
+		sqliteDB := sqliteOpen()
 
 		// Query for data
 		response := sqliteDB.QueryRow(`select exchange, ask, bid, ROUND((ask + bid) / 2, 8) as price,
@@ -555,13 +580,13 @@ func query_exchange_sqlite(exchange string, currencyCode string) (resp *APIStruc
 }
 
 // SELECT function ifromnto sqlite
-func query_exchange_currency_codes_sqlite(exchange string, url string) (resp []*string, err error) {
+func queryExchangeCurrencyCodesSQLite(exchange string, url string) (resp []*string, err error) {
 
 	// If the exchange name is not there, ignore, otherwise run
 	if len(exchange) > 0 {
 
 		// Write to DB
-		sqliteDB := sqlite_open()
+		sqliteDB := sqliteOpen()
 
 		// Query for data
 		response, err := sqliteDB.Query(`select DISTINCT currencyCode from exchanges where exchange = ?;`, exchange)
@@ -569,42 +594,8 @@ func query_exchange_currency_codes_sqlite(exchange string, url string) (resp []*
 		if err != nil {
 			log.Error(err.Error())
 			return nil, err
-		} else {
-			// Scan the values into a string slice
-			for response.Next() {
-				var tmp string
-				response.Scan(&tmp)
-				tmp = url + tmp
-				resp = append(resp, &tmp)
-			}
-
-			// If anything was returned
-			if len(resp) == 0 {
-				return nil, errors.New("Exchange doesn't exist")
-			}
-
 		}
 
-		// return response
-		return resp, nil
-	}
-	log.Warning("Nothing was queried!")
-	return nil, errors.New("Exchange doesn't exists")
-}
-
-// SELECT function sqlite
-func query_list_of_exchanges(url string) (resp []*string, err error) {
-
-	// Write to DB
-	sqliteDB := sqlite_open()
-
-	// Query for data
-	response, err := sqliteDB.Query(`select DISTINCT exchange from exchanges;`)
-	// Check if there are errors
-	if err != nil {
-		log.Error(err.Error())
-		return nil, err
-	} else {
 		// Scan the values into a string slice
 		for response.Next() {
 			var tmp string
@@ -615,9 +606,41 @@ func query_list_of_exchanges(url string) (resp []*string, err error) {
 
 		// If anything was returned
 		if len(resp) == 0 {
-			return nil, errors.New("No exchanges exist")
+			return nil, errors.New("Exchange doesn't exist")
 		}
 
+		// return response
+		return resp, nil
+	}
+	log.Warning("Nothing was queried!")
+	return nil, errors.New("Exchange doesn't exists")
+}
+
+// SELECT function sqlite
+func queryListOfExchanges(url string) (resp []*string, err error) {
+
+	// Write to DB
+	sqliteDB := sqliteOpen()
+
+	// Query for data
+	response, err := sqliteDB.Query(`select DISTINCT exchange from exchanges;`)
+	// Check if there are errors
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	// Scan the values into a string slice
+	for response.Next() {
+		var tmp string
+		response.Scan(&tmp)
+		tmp = url + tmp
+		resp = append(resp, &tmp)
+	}
+
+	// If anything was returned
+	if len(resp) == 0 {
+		return nil, errors.New("No exchanges exist")
 	}
 
 	// return response
@@ -625,7 +648,7 @@ func query_list_of_exchanges(url string) (resp []*string, err error) {
 }
 
 // clean strings before inserting, to provide default values
-func clean_strings(timestamp *string, ask *string, bid *string, volume *string) {
+func cleanStrings(timestamp *string, ask *string, bid *string, volume *string) {
 	if len(*timestamp) == 0 {
 		*timestamp = strconv.FormatInt(int64(time.Now().Unix()), 10)
 	}
@@ -647,7 +670,7 @@ func minuteTicker() *time.Ticker {
 }
 
 // Configure logging
-func config_log() {
+func configLog() {
 
 	// Check if it is already open
 	logFile.Close()
@@ -671,7 +694,7 @@ func config_log() {
 }
 
 // Configure configs
-func config_init() {
+func configInit() {
 
 	// Config File
 	viper.SetConfigName("config") // no need to include file extension
@@ -770,13 +793,13 @@ func config_init() {
 	viper.OnConfigChange(func(e fsnotify.Event) {
 
 		// Re-configure config
-		config_init()
+		configInit()
 
 		// Print out what the new config is
 		log.Info("Log file %+v", config)
 
 		// Re-configure logging
-		config_log()
+		configLog()
 
 		log.Info("Config file changed")
 	})
@@ -785,19 +808,19 @@ func config_init() {
 func main() {
 
 	// Initialise config file and settings
-	config_init()
+	configInit()
 
 	// Configure logging
-	config_log()
+	configLog()
 
 	// don't forget to close the log file
 	defer logFile.Close()
 
 	// Setup Sqlite DB
-	setup_sqlite_db()
+	setupSQLiteDB()
 
 	// Start bitcoin ticker
-	go bitcoin_prices()
+	go bitcoinPrices()
 
 	// Notify log that we are up and running
 	log.Info("started kyco.bitcoin.currency.tickers")
@@ -808,7 +831,7 @@ func main() {
 	// Setup Route
 	router.HandleFunc("/{exchange}/{currencyCode}", get_exchange_rate).Methods("GET")
 	router.HandleFunc("/{exchange}", show_exchange_methods).Methods("GET")
-	router.HandleFunc("/", show_exchanges).Methods("GET")
+	router.HandleFunc("/", showExchanges).Methods("GET")
 
 	// Create listen and serve
 	http.ListenAndServe(":"+config.Port, router)
